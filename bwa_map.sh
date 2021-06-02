@@ -24,7 +24,7 @@ R1=${forward[${SLURM_ARRAY_TASK_ID}]}
 prefix=${R1%%_R1_trimmed.fastq}
  
 bwa mem -t ${SLURM_CPUS_PER_TASK} -M ${BASE}/ref/dmel-all-chromosome-r6.23.fasta.gz ${prefix}_R1_trimmed.fastq \
-   ${prefix}_R2_trimmed.fastq > ${BASE}/mapped/${prefix}.sam
+   ${prefix}_R2_trimmed.fastq > ${BASE}/mapped${prefix}.sam
 
 # -M Mark shorter split hits as secondary (for Picard compatibility).
 # -t used to tell BWA to use 32 threads to speed things up
