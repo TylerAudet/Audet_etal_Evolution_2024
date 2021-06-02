@@ -12,19 +12,23 @@
 module load bwa/0.7.17
 
 # make the common path available in variable (this is optional, and just for the looks
-BASE=/home/audett/projects/def-idworkin/audett/SSD
+dir=/home/audett/projects/def-idworkin/audett/SSD/trimmed/
+out=/home/audett/projects/def-idworkin/audett/SSD/mapped/
 
 # make it arrays so you can index them
-declare -a forward=( ${BASE}/trimmed/*_R1_trimmed.fastq )
+declare -a forward=( /home/audett/projects/def-idworkin/audett/SSD/trimmed/*_R1_trimmed.fastq )
 
 # get the individual reads.
 R1=${forward[${SLURM_ARRAY_TASK_ID}]}
  
 # get the prefix of the reads
-prefix=${R1%%_R1_trimmed.fastq}
+#prefix=${R1%%_R1_trimmed.fastq}
  
-bwa mem -t ${SLURM_CPUS_PER_TASK} -M ${BASE}/ref/dmel-all-chromosome-r6.23.fasta.gz ${prefix}_R1_trimmed.fastq \
-   ${prefix}_R2_trimmed.fastq > ${BASE}/mapped${prefix}.sam
+name=${R1}
+base=`basename ${name} _R1_trimmed.fastq`
+ 
+bwa mem -t ${SLURM_CPUS_PER_TASK} -M /home/audett/projects/def-idworkin/audett/SSD/ref/dmel-all-chromosome-r6.23.fasta.gz ${dir}${base}_R1_trimmed.fastq \
+   ${dir}${base}_R2_trimmed.fastq > ${out}${base}.sam
 
 # -M Mark shorter split hits as secondary (for Picard compatibility).
 # -t used to tell BWA to use 32 threads to speed things up
