@@ -3,6 +3,12 @@
 # run fastqc
 QC.sh
 
+# Trim
+bbtrim.sh
+
+# QC
+QC_after_trim.sh
+
 # Index genome for bwa
 
 bwa index dmel-all-chromosome-r6.23.fasta.gz
