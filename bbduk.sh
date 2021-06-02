@@ -2,7 +2,7 @@
 #SBATCH -t 4:00:00
 #SBATCH -A def-idworkin
 #SBATCH --array=0-57
-#SBATCH -n 32
+#SBATCH --cpus-per-task=32
 #SBATCH --mem=10G
 #SBATCH --mail-user=audett@mcmaster.ca
 #SBATCH --mail-type=BEGIN
