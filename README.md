@@ -17,6 +17,8 @@ bwa index dmel-all-chromosome-r6.23.fasta.gz
 
 bwa_map.sh
 
+# Sam files converted to bam
 
+sam2bam.sh
 
 
