@@ -1,24 +1,26 @@
 # scripts
 
-# run fastqc
+## run fastqc
 QC.sh
 
-# Trim
+## Trim
 bbtrim.sh
 
-# QC
+## QC
 QC_after_trim.sh
 
-# Index genome for bwa
+## Index genome for bwa
 
 bwa index dmel-all-chromosome-r6.23.fasta.gz
 
-# Map genomes
+## Map genomes
 
 bwa_map.sh
 
-# Sam files converted to bam
+## Sam files converted to bam
 
 sam2bam.sh
 
+## merging first reads with top-up reads and then merging sexes
 
+merge.sh
