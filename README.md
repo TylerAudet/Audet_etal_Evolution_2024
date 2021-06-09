@@ -28,3 +28,7 @@ merge.sh
 ## Filter for quality over 20
 
 Q20.sh
+
+## Add read-groups because they are necessary for future programs
+
+addrg.sh
