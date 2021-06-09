@@ -21,6 +21,10 @@ bwa_map.sh
 
 sam2bam.sh
 
-## merging first reads with top-up reads and then merging sexes
+## merging first reads with supplimentary reads and then merging sexes
 
 merge.sh
+
+## Filter for quality over 20
+
+Q20.sh
