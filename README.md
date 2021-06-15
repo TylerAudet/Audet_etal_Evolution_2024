@@ -33,4 +33,11 @@ Q20.sh
 
 addrg.sh
 
+## Create an mpileup
+### Setting max coverage to 600 to avoid the super high coverage areas causing issues with memory and time
+
+mpileup_sexes.sh
+
+
+
 
