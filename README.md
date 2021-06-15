@@ -33,12 +33,4 @@ Q20.sh
 
 addrg.sh
 
-## Create dictionary file for gatk
 
-dict.sh
-
-## mark indels using gatk and then realign around them
-
-gatk_indel_target.sh
-
-gatk_realign.sh 
