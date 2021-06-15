@@ -22,6 +22,8 @@ bwa_map.sh
 sam2bam.sh
 
 ## merging first reads with supplimentary reads and then merging sexes
+### This requires `mv` to put matching samples in run1 and run2 respectively. The names also must match.
+### So to merge E1F and E1M `mv E1F.bam run1/E1.bam` and `mv E1M.bam run2/E1.bam` and then run the merge script.
 
 merge.sh
 
