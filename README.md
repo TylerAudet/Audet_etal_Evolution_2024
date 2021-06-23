@@ -36,9 +36,14 @@ Q20.sh
 addrg.sh
 
 ## Create an mpileup
-### Setting max coverage to 600 to avoid the super high coverage areas causing issues with memory and time
+### Setting max coverage to 800 to avoid the super high coverage areas causing issues with memory and time
+### Maximum coverage of 800 because average coverage should be 400 (males + females at 200 each) and I want to capture possible duplications, but nothing more than that.
 
 mpileup_sexes.sh
+
+## Make a VCF
+
+make_vcf.sh
 
 
 
