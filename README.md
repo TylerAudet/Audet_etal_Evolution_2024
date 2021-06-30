@@ -41,6 +41,13 @@ addrg.sh
 
 mpileup_sexes.sh
 
+
+## Remove repeat regions
+
+````
+perl /home/tylera/bin/popoolation_1.2.2/basic-pipeline/filter-pileup-by-gtf.pl --gtf /2/scratch/TylerA/Dmelgenome/dmel-all-chromosome-r6.23.fasta.out.gff --input ./Sexes_combined.mpileup --output ./Sexes_combined_norepeats.mpileup
+````
+
 ## Make a VCF
 
 make_vcf.sh
