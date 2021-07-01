@@ -36,11 +36,16 @@ Q20.sh
 addrg.sh
 
 ## Create an mpileup
-### Setting max coverage to 800 to avoid the super high coverage areas causing issues with memory and time
-### Maximum coverage of 800 because average coverage should be 400 (males + females at 200 each) and I want to capture possible duplications, but nothing more than that.
+### Setting max coverage to 450 to avoid the super high coverage areas causing issues with memory and time
+### Maximum coverage of 450 because average coverage should be 400 (males + females at 200 each)
+### also swtching back to using info because sharcnet is too time consuming
 
-mpileup_sexes.sh
-
+````
+samtools mpileup -Q 20 -q 20 -d 450 \
+-f /2/scratch/TylerA/Dmelgenome/gatk/dmel-all-chromosome-r6.23.fa \
+./*.bam \
+-o Sexes_combined.mpileup
+````
 
 ## Remove repeat regions
 
@@ -51,6 +56,12 @@ perl /home/tylera/bin/popoolation_1.2.2/basic-pipeline/filter-pileup-by-gtf.pl -
 ## Make a VCF
 
 make_vcf.sh
+
+## Make a sync
+
+````
+java -ea -jar /usr/local/popoolation/mpileup2sync.jar --threads 16 --input ./Sexes_combined_norepeats.mpileup --output ./Sexes_combined_norepeats.sync
+````
 
 # Calculate Fst
 
