@@ -128,3 +128,20 @@ CVE.png![CVE](https://user-images.githubusercontent.com/77504755/124128284-a116e
 
 LVS.png![LVS](https://user-images.githubusercontent.com/77504755/124128316-aaa04f80-da4a-11eb-9923-1e9e5c91e144.png)
 
+# Checking vcf coverage
+
+````
+vcftools --vcf Sexes_combined_variants.vcf --site-mean-depth
+````
+change name so my plot script can work
+
+````
+mv out.ldepth.mean Sexes_combined.coverage
+````
+
+````
+plot_coverage.sh
+````
+
+
+
