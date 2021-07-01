@@ -63,7 +63,7 @@ library(ggplot2)
 ##### Convert sync file to poolfstat file, and call SNPS
 
 # We first have to give haploid sizes of each pool.
-psizes <- as.numeric(c('100','100','100','100','100','100','100','100'))
+psizes <- as.numeric(c('200','200','200','200','200','200','200','200'))
 
 # Then we give the names of each pool/sample.
 pnames <- as.character(c('C1','C2','E1','E2','L1','L2','S1','S2'))
