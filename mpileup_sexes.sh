@@ -9,7 +9,7 @@
 
 module load samtools
 
-samtools mpileup -Q 20 -q 20 -d 600 \
+samtools mpileup -Q 20 -q 20 -d 450 \
 -f /home/audett/projects/def-idworkin/audett/SSD/ref/dmel-all-chromosome-r6.23.fasta \
 /home/audett/projects/def-idworkin/audett/SSD/dedup/*_RG_dedup.bam \
 -o Sexes_combined.mpileup
