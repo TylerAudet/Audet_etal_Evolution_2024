@@ -57,6 +57,39 @@ perl /home/tylera/bin/popoolation_1.2.2/basic-pipeline/filter-pileup-by-gtf.pl -
 
 make_vcf.sh
 
+for sexes combined:
+````
+java -Xmx32g -jar \
+~/bin/VarScan.v2.3.9.jar \
+mpileup2cns \
+./combined_norepeats.mpileup \
+--min-reads2 5 \
+--min-coverage 50 \
+--p-value 0.1 \
+--min-var-freq 0.01 \
+--min-freq-for-hom 1 \
+--min-avg-qual 20 \
+--variants \
+--output-vcf 1 \
+> ./combined_variants.vcf
+````
+for replicates combined min coverage is doubled because coverage should double:
+
+````
+java -Xmx32g -jar \
+~/bin/VarScan.v2.3.9.jar \
+mpileup2cns \
+./combined_norepeats.mpileup \
+--min-reads2 5 \
+--min-coverage 100 \
+--p-value 0.1 \
+--min-var-freq 0.01 \
+--min-freq-for-hom 1 \
+--min-avg-qual 20 \
+--variants \
+--output-vcf 1 \
+> ./combined_variants.vcf
+````
 ## Make a sync
 
 ````
