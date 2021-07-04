@@ -120,24 +120,10 @@ pnames <- as.character(c('C1','C2','E1','E2','L1','L2','S1','S2'))
 #4) min.maf = the minimum allele frequency (over all pools) for a SNP to be called (note this is obtained from dividing the read counts for the minor allele over the total read coverage) 
 #5) nlines.per.readblock = number of lines in sync file to be read simultaneously 
 
-SG.pooldata <- vcf2pooldata(vcf.file = "/2/scratch/TylerA/SSD/bwamap/Sexes_combined_variants.vcf", poolsizes = psizes, poolnames = pnames,
-                                     min.rc = 5, min.cov.per.pool = 50, max.cov.per.pool = 400,
-                                     min.maf = 0.001, remove.indels = FALSE, nlines.per.readblock = 1e+06)
-
-
-##### From this file we can compute global and per SNP FSTs
-SG.snp.fsts <- computeFST(SG.pooldata, method = "Anova", snp.index = NA)
-
-#Assign SNP location for graphing
-crap <- data.frame(SG.pooldata@snp.info, SG.snp.fsts$snp.FST)
-
-
-
+SG.pooldata <- vcf2pooldata(vcf.file = "/2/scratch/TylerA/SSD/bwamap/Sexes_combined_variants.vcf", poolsizes = psizes, poolnames = pnames)
 
 ##### And we can compute pairwise FSTs
 SG.pair.fst <- computePairwiseFSTmatrix(SG.pooldata, method = "Anova",
-                                        min.cov.per.pool = 50, max.cov.per.pool = 175,
-                                        min.maf = 0.001,
                                         output.snp.values = TRUE)
 
 test<-as.matrix(SG.pair.fst$PairwiseSnpFST)
