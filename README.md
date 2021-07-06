@@ -172,6 +172,115 @@ mv out.ldepth.mean Sexes_combined.coverage
 ````
 plot_coverage.sh
 ````
+## Calculate CMH
+
+````
+rm(list=ls())
+#install.packages("/home/tylera/bin/poolSeq-0.3.5.tar.gz", repos=NULL, type="source")
+#install.packages("/home/tylera/bin/ACER-1.0.2.tar.gz")
+
+#Loading in the required packages
+library(poolSeq)
+library(ACER)
+
+reps <- c(1:8)
+gen <- rep(0,8)
+sync <- read.sync("/2/scratch/TylerA/SSD/bwamap/Sexes_combined_norepeats.sync", 
+                  gen=gen, repl=reps, 
+                  polarization = "minor", 
+                  keepOnlyBiallelic = TRUE)
+
+
+
+
+pops <-c('C1','C2','E1','E2','L1','L2','S1','S2')
+       
+
+af.mat <- matrix(NA, nrow = nrow(sync@alleles), ncol = 8)
+colnames(af.mat) <- pops
+
+for (i in 1:ncol(af.mat)){
+  tempdat <- af(sync, repl = i, gen = 0)
+  af.mat[,i] <- as.matrix(tempdat)
+}
+
+af.mat <- na.omit(af.mat)
+head(af.mat)
+dim(af.mat)
+
+af.mat2 <- af.mat[,c(1,2,3,4)]
+dim(af.mat2)
+    
+#now to make a coverage one. 
+
+cov.mat <- matrix(NA, nrow = nrow(sync@alleles), ncol = 8)
+colnames(cov.mat) <- pops
+
+for (i in 1:ncol(cov.mat)){
+  tempdat <- coverage(sync, repl = i, gen = 0)
+  cov.mat[,i] <- as.matrix(tempdat)
+}
+
+crap <- data.frame(cov.mat, sync@alleles[,1:2])
+crap[crap==0] <- NA
+crap2 <- na.omit(crap)
+location <- crap2[,9:10]
+
+cov.mat[cov.mat == 0] <- NA
+cov.mat <- na.omit(cov.mat)
+
+dim(cov.mat)
+
+head(cov.mat)
+
+cov.mat2 <- cov.mat[,c(1,2,3,4)]
+dim(cov.mat2)
+
+#Now I want to estimate Ne to use below. 
+#ne <- estimateNe(p0=af.mat2[,"CMO.L"], pt=af.mat2[,"CMO.R"], 
+#           cov0=cov.mat2[,"CMO.L"], covt=cov.mat2[,"CMO.R"], 
+#           t=0, method = "P.planII", poolSize=c(150, 150))
+
+#Creating the vars for the CMH test 
+rep<-c(1,1,2,2) #Number of replicates
+Ne<-c(160,160)
+tp<-c(0,0,750,750) #Generations of evolution for each sample
+ps<-c(400,400,400,400) #Pool size
+
+#cmh test 
+#I think I need to include the random pools as a gen 0?
+
+pval <- adapted.cmh.test(freq=af.mat2, coverage=cov.mat2, 
+                         Ne=Ne, gen=tp, repl=rep, poolSize=ps)
+
+
+# Warning messages:
+#   1: In adapted.cmh.test(freq = af.mat, coverage = cov.mat, Ne = Ne,  :
+#       Ne value(s) which are not integer are converted to integer
+#I took care of this (warning 2) by setting left to gen 0 and right to gen 1 
+#   2: In adapted.cmh.test(freq = af.mat, coverage = cov.mat, Ne = Ne,  :
+#       Value of 'Ne' will be ignored because no random genetic drift is assumed.
+#   3: In adapted.cmh.test(freq = af.mat, coverage = cov.mat, Ne = Ne,  :
+#       The counts that equal 0 or equal the coverage in all replicates are changed to 1 or to coverage-1 respectively.
+
+
+padj <- p.adjust(pval, "fdr")
+data <- cbind(cov.mat2, pval, padj)
+data<-cbind(location,data)
+data<-data[,c(1,2,7,8)]
+data$neg.log10 <- -log10(data$padj)
+
+
+write.csv(data, "/2/scratch/TylerA/SSD/bwamap/CVE_pval.csv")
+
+(END) 
+````
+## Plot CMH -log10
+
+
+
+
+
 
 
 
