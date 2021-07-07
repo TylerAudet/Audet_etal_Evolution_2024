@@ -62,9 +62,14 @@ perl /home/tylera/bin/popoolation_1.2.2/basic-pipeline/filter-pileup-by-gtf.pl -
 # ID indels
 perl /home/tylera/bin/popoolation2_1201/indel_filtering/identify-indel-regions.pl --input ./Sexes_combined_norepeats_nosus.mpileup --output ./Sexes_combined_norepeat_nosus.gtf --indel-window 10
 
+#Pileup entries processed: 112150681
+#Pileup entries containing at least one indel: 1392619
+#How many bp of the reference are covered by indel-regions: 24178268
+
+
 # hard masks indels
 
-perl /home/tylera/bin/popoolation_1.2.2/basic-pipeline/filter-pileup-by-gtf.pl --gtf ./Sexes_combined_norepeat_nosus.gtf --input ./Sexes_combined_norepeat_nosus.mpileup --output ./Sexes_combined_norepeat_nosus_noindel.mpileup
+perl /home/tylera/bin/popoolation_1.2.2/basic-pipeline/filter-pileup-by-gtf.pl --gtf ./Sexes_combined_norepeat_nosus.gtf --input ./Sexes_combined_norepeats_nosus.mpileup --output ./Sexes_combined_norepeat_nosus_noindel.mpileup
 
 ````
 
