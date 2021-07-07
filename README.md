@@ -287,6 +287,11 @@ write.csv(data2, "/2/scratch/TylerA/SSD/bwamap/LVS_pval.csv")
 ````
 ## Plot CMH -log10
 
+CVE_pval_plot.png![CVE_pval_plot](https://user-images.githubusercontent.com/77504755/124754676-80420c80-def8-11eb-9267-61540e0fbf6a.png)
+
+
+LVS_pval_plot.png![LVS_pval_plot](https://user-images.githubusercontent.com/77504755/124754719-8932de00-def8-11eb-9094-a07eda2a4039.png)
+
 
 
 
