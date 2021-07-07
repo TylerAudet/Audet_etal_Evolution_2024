@@ -76,7 +76,21 @@ for sexes combined:
 ````
 java -Xmx32g -jar \
 ~/bin/VarScan.v2.3.9.jar \
-mpileup2cns \
+mpileup2indel \
+./combined_norepeats.mpileup \
+--min-reads2 5 \
+--min-coverage 50 \
+--p-value 0.1 \
+--min-var-freq 0.01 \
+--min-freq-for-hom 1 \
+--min-avg-qual 20 \
+--variants \
+--output-vcf 1 \
+> ./combined_indels.vcf
+
+java -Xmx32g -jar \
+~/bin/VarScan.v2.3.9.jar \
+mpileup2snp \
 ./combined_norepeats.mpileup \
 --min-reads2 5 \
 --min-coverage 50 \
@@ -87,28 +101,14 @@ mpileup2cns \
 --variants \
 --output-vcf 1 \
 > ./combined_variants.vcf
+
 ````
 for replicates combined min coverage is doubled because coverage should double:
 
-````
-java -Xmx32g -jar \
-~/bin/VarScan.v2.3.9.jar \
-mpileup2cns \
-./combined_norepeats.mpileup \
---min-reads2 5 \
---min-coverage 100 \
---p-value 0.1 \
---min-var-freq 0.01 \
---min-freq-for-hom 1 \
---min-avg-qual 20 \
---variants \
---output-vcf 1 \
-> ./combined_variants.vcf
-````
 ## Make a sync
 
 ````
-java -ea -jar /usr/local/popoolation/mpileup2sync.jar --threads 16 --input ./Sexes_combined_norepeats.mpileup --output ./Sexes_combined_norepeats.sync
+java -ea -jar /usr/local/popoolation/mpileup2sync.jar --threads 16 --input ./Sexes_combined_norepeat_nosus_noindel.mpileup --output ./Sexes_combined_norepeats.sync
 ````
 
 # Calculate Fst
