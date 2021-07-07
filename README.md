@@ -51,6 +51,21 @@ samtools mpileup -Q 20 -q 20 -d 450 \
 
 ````
 perl /home/tylera/bin/popoolation_1.2.2/basic-pipeline/filter-pileup-by-gtf.pl --gtf /2/scratch/TylerA/Dmelgenome/dmel-all-chromosome-r6.23.fasta.out.gff --input ./Sexes_combined.mpileup --output ./Sexes_combined_norepeats.mpileup
+
+/usr/local/RepeatMasker/RepeatMasker -pa 10 -species drosophila -gff dmel-all-chromosome-r6.23.fasta
+
+
+# Remove suspicious areas
+
+perl /home/tylera/bin/popoolation_1.2.2/basic-pipeline/filter-pileup-by-gtf.pl --gff /2/scratch/TylerA/SSD/suspicious_coverage.gff --input ./Sexes_combined_norepeats.mpileup --output ./Sexes_combined_norepeats_nosus.mpileup
+
+# ID indels
+perl /home/tylera/bin/popoolation2_1201/indel_filtering/identify-indel-regions.pl --input ./Sexes_combined_norepeats_nosus.mpileup --output ./Sexes_combined_norepeat_nosus.gtf --indel-window 10
+
+# hard masks indels
+
+perl /home/tylera/bin/popoolation_1.2.2/basic-pipeline/filter-pileup-by-gtf.pl --gtf ./Sexes_combined_norepeat_nosus.gtf --input ./Sexes_combined_norepeat_nosus.mpileup --output ./Sexes_combined_norepeat_nosus_noindel.mpileup
+
 ````
 
 ## Make a VCF
