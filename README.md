@@ -209,7 +209,9 @@ head(af.mat)
 dim(af.mat)
 
 af.mat2 <- af.mat[,c(1,2,3,4)]
-dim(af.mat2)
+af.mat3 <- af.mat[,c(5,6,7,8)]
+dim(af.mat3)
+
     
 #now to make a coverage one. 
 
@@ -234,7 +236,9 @@ dim(cov.mat)
 head(cov.mat)
 
 cov.mat2 <- cov.mat[,c(1,2,3,4)]
+cov.mat3 <- cov.mat[,c(5,6,7,8)]
 dim(cov.mat2)
+dim(cov.mat3)
 
 #Now I want to estimate Ne to use below. 
 #ne <- estimateNe(p0=af.mat2[,"CMO.L"], pt=af.mat2[,"CMO.R"], 
@@ -252,7 +256,8 @@ ps<-c(400,400,400,400) #Pool size
 
 pval <- adapted.cmh.test(freq=af.mat2, coverage=cov.mat2, 
                          Ne=Ne, gen=tp, repl=rep, poolSize=ps)
-
+pval2 <- adapted.cmh.test(freq=af.mat3, coverage=cov.mat3, 
+                         Ne=Ne, gen=tp, repl=rep, poolSize=ps)
 
 # Warning messages:
 #   1: In adapted.cmh.test(freq = af.mat, coverage = cov.mat, Ne = Ne,  :
@@ -270,10 +275,15 @@ data<-cbind(location,data)
 data<-data[,c(1,2,7,8)]
 data$neg.log10 <- -log10(data$padj)
 
+padj2 <- p.adjust(pval2, "fdr")
+data2 <- cbind(cov.mat3, pval2, padj2)
+data2<-cbind(location,data2)
+data2<-data2[,c(1,2,7,8)]
+data2$neg.log10 <- -log10(data2$padj)
+
 
 write.csv(data, "/2/scratch/TylerA/SSD/bwamap/CVE_pval.csv")
-
-(END) 
+write.csv(data2, "/2/scratch/TylerA/SSD/bwamap/LVS_pval.csv") 
 ````
 ## Plot CMH -log10
 
