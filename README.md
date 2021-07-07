@@ -82,7 +82,7 @@ for sexes combined:
 java -Xmx32g -jar \
 ~/bin/VarScan.v2.3.9.jar \
 mpileup2indel \
-./combined_norepeats.mpileup \
+./Sexes_combined_norepeat_nosus.mpileup \
 --min-reads2 5 \
 --min-coverage 50 \
 --p-value 0.1 \
@@ -96,7 +96,7 @@ mpileup2indel \
 java -Xmx32g -jar \
 ~/bin/VarScan.v2.3.9.jar \
 mpileup2snp \
-./combined_norepeats.mpileup \
+./Sexes_combined_norepeat_nosus_noindel.mpileup \
 --min-reads2 5 \
 --min-coverage 50 \
 --p-value 0.1 \
