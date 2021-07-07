@@ -293,7 +293,114 @@ CVE_pval_plot.png![CVE_pval_plot](https://user-images.githubusercontent.com/7750
 LVS_pval_plot.png![LVS_pval_plot](https://user-images.githubusercontent.com/77504755/124754719-8932de00-def8-11eb-9094-a07eda2a4039.png)
 
 
+## Creating a suspicious coverage .gff
 
+The high Fst found in male vs. female comparisons in the conflict_workflow highlights some areas that are most likely not true. So I created a file with those locations with a 10bp before and after window to remove from my genomes.
+
+````
+################################# USING POOLFSTAT ###############################
+##################################################################################
+
+rm(list=ls())
+
+library(poolfstat)
+library(WriteXLS)
+library(ggplot2)
+library(plyr)
+library(dplyr)
+##### Convert sync file to poolfstat file, and call SNPS
+
+# We first have to give haploid sizes of each pool.
+psizes <- as.numeric(c('100','100','100','100','100','100','100','100','100','100','100','100','100','100','100','100'))
+
+# Then we give the names of each pool/sample.
+pnames <- as.character(c('C1F','C1M','C2F','C2M','E1F','E1M','E2F','E2M','L1F','L1M','L2F','L2M','S1F','S1M','S2F','S2M'))
+
+# Here is where we read the sync file and call SNPs. The input file must have the '.sync' extension, and can also be gzipped, like in the example below. The parameters to note are: 
+
+#1) min.rc =  the minimum # reads that an allele needs to have (across all pools) to be called 
+#2) min.cov.per.pool = the minimum allowed read count per pool for SNP to be called
+#3) max.cov.per.pool = the maximum read count per pool for SNP to be called 
+#4) min.maf = the minimum allele frequency (over all pools) for a SNP to be called (note this is obtained from dividing the read counts for the minor allele over the total read coverage) 
+#5) nlines.per.readblock = number of lines in sync file to be read simultaneously 
+
+SG.pooldata <- vcf2pooldata(vcf.file = "/2/scratch/TylerA/SSD/Conflict/conflict_norepeat_variants.vcf", poolsizes = psizes, poolnames = pnames,
+                                     min.rc = 5, min.cov.per.pool = 50, max.cov.per.pool = 300,
+                                     min.maf = 0.001, remove.indels = FALSE, nlines.per.readblock = 1e+06)
+
+#Parsing allele counts
+#VarScan like format detected for allele count data: the AD field contains allele depth for the alternate allele and RD field for the reference allele (N.B., positions with more than one alternate allele will be ignored)
+#1e+06  lines processed in 0 h  0 m  53 s : 821946 SNPs found
+#1429860  lines processed in 0 h  1 m  13 s : 1085681 SNPs found
+#Data consists of 1085681 SNPs for 16 Pools
+
+
+
+##### From this file we can compute global and per SNP FSTs
+SG.snp.fsts <- computeFST(SG.pooldata, method = "Anova", snp.index = NA)
+
+#Assign SNP location for graphing
+crap <- data.frame(SG.pooldata@snp.info, SG.snp.fsts$snp.FST)
+
+
+
+
+##### And we can compute pairwise FSTs
+SG.pair.fst <- computePairwiseFSTmatrix(SG.pooldata, method = "Anova",
+                                        min.cov.per.pool = 50, max.cov.per.pool = 175,
+                                        min.maf = 0.001,
+                                        output.snp.values = TRUE)
+
+##### If you want to save the pairwise matrix, you can do the following:
+#SG.p.fst <- SG.pair.fst$PairwiseFSTmatrix
+#SG.p.fst <- as.data.frame(SG.p.fst)
+#WriteXLS(SG.p.fst, "SG.p.fst.xls")
+
+test<-as.matrix(SG.pair.fst$PairwiseSnpFST)
+crap <- data.frame(SG.pooldata@snp.info, test[,c(1,30,55,76,93,106,115,120)])
+
+
+C1F_C1M <- data.frame(crap[c(1,2,5)])
+C2F_C2M <- data.frame(crap[c(1,2,6)])
+E1F_E1M <- data.frame(crap[c(1,2,7)])
+E2F_E2M <- data.frame(crap[c(1,2,8)])
+L1F_L1M <- data.frame(crap[c(1,2,9)])
+L2F_L2M <- data.frame(crap[c(1,2,10)])
+S1F_S1M <- data.frame(crap[c(1,2,11)])
+S2F_S2M <- data.frame(crap[c(1,2,12)])
+
+C1F_C1M <- na.omit(C1F_C1M)
+C2F_C2M <- na.omit(C2F_C2M)
+E1F_E1M <- na.omit(E1F_E1M)
+E2F_E2M <- na.omit(E2F_E2M)
+L1F_L1M <- na.omit(L1F_L1M)
+L2F_L2M <- na.omit(L2F_L2M)
+S1F_S1M <- na.omit(S1F_S1M)
+S2F_S2M <- na.omit(S2F_S2M)
+
+high_C1F_C1M <- C1F_C1M[which(C1F_C1M$C1F_vs_C1M>=0.05),]
+high_C2F_C2M <- C2F_C2M[which(C2F_C2M$C2F_vs_C2M>=0.05),]
+high_E1F_E1M <- E1F_E1M[which(E1F_E1M$E1F_vs_E1M>=0.05),]
+high_E2F_E2M <- E2F_E2M[which(E2F_E2M$E2F_vs_E2M>=0.05),]
+high_L1F_L1M <- L1F_L1M[which(L1F_L1M$L1F_vs_L1M>=0.05),]
+high_L2F_L2M <- L2F_L2M[which(L2F_L2M$L2F_vs_L2M>=0.05),]
+high_S1F_S1M <- S1F_S1M[which(S1F_S1M$S1F_vs_S1M>=0.05),]
+high_S2F_S2M <- S2F_S2M[which(S2F_S2M$S2F_vs_S2M>=0.05),]
+
+match<-match_df(high_C1F_C1M, high_C2F_C2M, on = "X2")
+
+test<-match[,1:2]
+test$X2<-as.numeric(test$X2)
+test$start<-test$X2-10
+test$end<-test$X2+10
+test$feature<-rep("repeat",length(567))
+test$score<-rep("1",length(567))
+test$strand<-rep("1",length(567))
+test <- data.frame(test[,c(2,1,5,3,4,6,7)])
+
+write.table(test, file = "/2/scratch/TylerA/SSD/suspicious_coverage.gff", sep = "\t",
+            row.names = FALSE, quote = FALSE)
+````
 
 
 
