@@ -200,6 +200,7 @@ rm(list=ls())
 #install.packages("/home/tylera/bin/ACER-1.0.2.tar.gz")
 
 #Loading in the required packages
+library(ggplot2)
 library(poolSeq)
 library(ACER)
 
@@ -261,13 +262,15 @@ dim(cov.mat2)
 dim(cov.mat3)
 
 #Now I want to estimate Ne to use below. 
-#ne <- estimateNe(p0=af.mat2[,"CMO.L"], pt=af.mat2[,"CMO.R"], 
-#           cov0=cov.mat2[,"CMO.L"], covt=cov.mat2[,"CMO.R"], 
-#           t=0, method = "P.planII", poolSize=c(150, 150))
+ne <- estimateNe(p0=af.mat2[,"C1"], pt=af.mat2[,"E1"], 
+           cov0=cov.mat2[,"C1"], covt=cov.mat2[,"E1"], 
+           t=750, method = "P.planII", poolSize=c(200, 200))
+
+# Ne = 237
 
 #Creating the vars for the CMH test 
 rep<-c(1,1,2,2) #Number of replicates
-Ne<-c(160,160)
+Ne<-c(237,237)
 tp<-c(0,0,750,750) #Generations of evolution for each sample
 ps<-c(400,400,400,400) #Pool size
 
@@ -304,6 +307,91 @@ data2$neg.log10 <- -log10(data2$padj)
 
 write.csv(data, "/2/scratch/TylerA/SSD/bwamap/CVE_pval.csv")
 write.csv(data2, "/2/scratch/TylerA/SSD/bwamap/LVS_pval.csv") 
+
+ddat2<-data
+
+
+ddat22L <- ddat2[which(ddat2$chr=='2L'),]
+ddat22R <- ddat2[which(ddat2$chr=='2R'),]
+ddat23L <- ddat2[which(ddat2$chr=='3L'),]
+ddat23R <- ddat2[which(ddat2$chr=='3R'),]
+ddat24 <- ddat2[which(ddat2$chr=='4'),]
+ddat2X <- ddat2[which(ddat2$chr=='X'),]
+ddat2 <- rbind(ddat2X, ddat22L, ddat22R, ddat23L, ddat23R, ddat24)
+
+
+g <- nrow(ddat2[which(ddat2$chr=='2L'),])
+h <- nrow(ddat2[which(ddat2$chr=='2R'),])
+i <- nrow(ddat2[which(ddat2$chr=='3L'),])
+j <- nrow(ddat2[which(ddat2$chr=='3R'),])
+k <- nrow(ddat2[which(ddat2$chr=='4'),])
+l <- nrow(ddat2[which(ddat2$chr=='X'),])
+
+ddat2$number <-  c((1:l),
+                   (l+1):(l+g), 
+                   (l+g+1):(l+g+h), 
+                   (l+g+h+1):(l+g+h+i),
+                   (l+g+h+i+1):(l+g+h+i+j),
+                   (l+g+h+i+j+1):(l+g+h+i+j+k))
+
+
+plot<-ggplot(ddat2, aes(x=number, y=neg.log10, color=chr)) +
+  geom_point(size=0.5, show.legend = F, alpha=0.25) +
+  theme(panel.background = element_blank()) +
+  scale_colour_manual(values=c("seagreen", "darkslateblue", 'darkred', 'darkorchid4', 'darkolivegreen', 'darkblue')) +
+  theme(text = element_text(size=20),
+        axis.text.x= element_text(size=15), 
+        axis.text.y= element_text(size=15))
+        
+        
+png("/2/scratch/TylerA/SSD/bwamap/CVE_pval_plot.png",type="cairo")
+plot
+dev.off()
+
+
+ddat2<-data2
+
+
+ddat22L <- ddat2[which(ddat2$chr=='2L'),]
+ddat22R <- ddat2[which(ddat2$chr=='2R'),]
+ddat23L <- ddat2[which(ddat2$chr=='3L'),]
+ddat23R <- ddat2[which(ddat2$chr=='3R'),]
+ddat24 <- ddat2[which(ddat2$chr=='4'),]
+ddat2X <- ddat2[which(ddat2$chr=='X'),]
+ddat2 <- rbind(ddat2X, ddat22L, ddat22R, ddat23L, ddat23R, ddat24)
+
+
+g <- nrow(ddat2[which(ddat2$chr=='2L'),])
+h <- nrow(ddat2[which(ddat2$chr=='2R'),])
+i <- nrow(ddat2[which(ddat2$chr=='3L'),])
+j <- nrow(ddat2[which(ddat2$chr=='3R'),])
+k <- nrow(ddat2[which(ddat2$chr=='4'),])
+l <- nrow(ddat2[which(ddat2$chr=='X'),])
+
+ddat2$number <-  c((1:l),
+                   (l+1):(l+g), 
+                   (l+g+1):(l+g+h), 
+                   (l+g+h+1):(l+g+h+i),
+                   (l+g+h+i+1):(l+g+h+i+j),
+                   (l+g+h+i+j+1):(l+g+h+i+j+k))
+
+
+plot<-ggplot(ddat2, aes(x=number, y=neg.log10, color=chr)) +
+  geom_point(size=0.5, show.legend = F, alpha=0.25) +
+  theme(panel.background = element_blank()) +
+  scale_colour_manual(values=c("seagreen", "darkslateblue", 'darkred', 'darkorchid4', 'darkolivegreen', 'darkblue')) +
+  theme(text = element_text(size=20),
+        axis.text.x= element_text(size=15), 
+        axis.text.y= element_text(size=15))
+        
+        
+png("/2/scratch/TylerA/SSD/bwamap/LVS_pval_plot.png",type="cairo")
+plot
+dev.off()
+
+
+
+
 ````
 ## Plot CMH -log10
 
