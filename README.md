@@ -171,13 +171,7 @@ write.table(LVS, file = "/2/scratch/TylerA/SSD/bwamap/LVS.fst", sep = "\t",
 
 plot_fst.sh (calls plot_fst.R)
 
-# Control vs. SSD-reverse
 
-CVE_pval_plot.png![CVE_pval_plot](https://user-images.githubusercontent.com/77504755/124979733-6d672f00-e001-11eb-9522-9cdc01f1f325.png)
-
-# Large vs. Small
-
-LVS_pval_plot.png![LVS_pval_plot](https://user-images.githubusercontent.com/77504755/124979750-75bf6a00-e001-11eb-8228-10e223540b6a.png)
 
 # Checking vcf coverage
 
@@ -395,12 +389,13 @@ dev.off()
 
 ````
 ## Plot CMH -log10
+# Control vs. SSD-reverse
 
-CVE_pval_plot.png![CVE_pval_plot](https://user-images.githubusercontent.com/77504755/124754676-80420c80-def8-11eb-9267-61540e0fbf6a.png)
+CVE_pval_plot.png![CVE_pval_plot](https://user-images.githubusercontent.com/77504755/124979733-6d672f00-e001-11eb-9522-9cdc01f1f325.png)
 
+# Large vs. Small
 
-LVS_pval_plot.png![LVS_pval_plot](https://user-images.githubusercontent.com/77504755/124754719-8932de00-def8-11eb-9094-a07eda2a4039.png)
-
+LVS_pval_plot.png![LVS_pval_plot](https://user-images.githubusercontent.com/77504755/124979750-75bf6a00-e001-11eb-8228-10e223540b6a.png)
 
 ## Creating a suspicious coverage .gff
 
