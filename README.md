@@ -172,11 +172,12 @@ write.table(LVS, file = "/2/scratch/TylerA/SSD/bwamap/LVS.fst", sep = "\t",
 plot_fst.sh (calls plot_fst.R)
 
 # Control vs. SSD-reverse
-CVE.png![CVE](https://user-images.githubusercontent.com/77504755/124128284-a116e780-da4a-11eb-8c2f-906695b1f090.png)
+
+CVE_pval_plot.png![CVE_pval_plot](https://user-images.githubusercontent.com/77504755/124979733-6d672f00-e001-11eb-9522-9cdc01f1f325.png)
 
 # Large vs. Small
 
-LVS.png![LVS](https://user-images.githubusercontent.com/77504755/124128316-aaa04f80-da4a-11eb-9923-1e9e5c91e144.png)
+LVS_pval_plot.png![LVS_pval_plot](https://user-images.githubusercontent.com/77504755/124979750-75bf6a00-e001-11eb-8228-10e223540b6a.png)
 
 # Checking vcf coverage
 
