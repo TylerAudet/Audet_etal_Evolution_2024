@@ -93,6 +93,11 @@ mpileup2indel \
 --output-vcf 1 \
 > ./combined_indels.vcf
 
+#112150681 bases in pileup file
+#1450110 variant positions (1237206 SNP, 215353 indel)
+#37846 were failed by the strand-filter
+#191067 variant positions reported (2376 SNP, 191067 indel)
+
 java -Xmx32g -jar \
 ~/bin/VarScan.v2.3.9.jar \
 mpileup2snp \
@@ -106,6 +111,11 @@ mpileup2snp \
 --variants \
 --output-vcf 1 \
 > ./combined_variants.vcf
+
+#88257778 bases in pileup file
+#910305 variant positions (910305 SNP, 0 indel)
+#8123 were failed by the strand-filter
+#902182 variant positions reported (902182 SNP, 0 indel)
 
 ````
 for replicates combined min coverage is doubled because coverage should double:
