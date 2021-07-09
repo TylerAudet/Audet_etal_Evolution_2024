@@ -50,7 +50,7 @@ samtools mpileup -Q 20 -q 20 -d 450 \
 I am repeating the process with all replicates merged to calculate Fst to see if that clears up some of the high Fst estimates.
 
 ````
-samtools mpileup -Q 20 -q 20 -d 450 \
+samtools mpileup -Q 20 -q 20 -d 900 \
 -f /2/scratch/TylerA/Dmelgenome/gatk/dmel-all-chromosome-r6.23.fa \
 ./*.bam \
 -o merged.mpileup
