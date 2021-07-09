@@ -150,7 +150,7 @@ pnames <- as.character(c('C1','C2','E1','E2','L1','L2','S1','S2'))
 #4) min.maf = the minimum allele frequency (over all pools) for a SNP to be called (note this is obtained from dividing the read counts for the minor allele over the total read coverage) 
 #5) nlines.per.readblock = number of lines in sync file to be read simultaneously 
 
-SG.pooldata <- vcf2pooldata(vcf.file = "/2/scratch/TylerA/SSD/bwamap/Sexes_combined_variants.vcf", poolsizes = psizes, poolnames = pnames)
+SG.pooldata <- vcf2pooldata(vcf.file = "/2/scratch/TylerA/SSD/bwamap/combined_variants.vcf", poolsizes = psizes, poolnames = pnames)
 
 ##### And we can compute pairwise FSTs
 SG.pair.fst <- computePairwiseFSTmatrix(SG.pooldata, method = "Anova",
@@ -181,12 +181,14 @@ write.table(LVS, file = "/2/scratch/TylerA/SSD/bwamap/LVS.fst", sep = "\t",
 
 plot_fst.sh (calls plot_fst.R)
 
+CVE.png![CVE](https://user-images.githubusercontent.com/77504755/125079376-87e8e900-e091-11eb-8f3b-f546f6e49689.png)
 
+LVS.png![LVS](https://user-images.githubusercontent.com/77504755/125079399-8e776080-e091-11eb-8674-a1d20de6ce22.png)
 
 # Checking vcf coverage
 
 ````
-vcftools --vcf Sexes_combined_variants.vcf --site-mean-depth
+vcftools --vcf combined_variants.vcf --site-mean-depth
 ````
 change name so my plot script can work
 
