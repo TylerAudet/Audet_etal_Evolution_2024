@@ -193,6 +193,13 @@ CVE.png![CVE](https://user-images.githubusercontent.com/77504755/125079376-87e8e
 
 LVS.png![LVS](https://user-images.githubusercontent.com/77504755/125079399-8e776080-e091-11eb-8674-a1d20de6ce22.png)
 
+## Plot with replicates merged
+
+merged_LVS.png![merged_LVS](https://user-images.githubusercontent.com/77504755/125775434-16fc2620-88bf-4e73-9031-764b56c9c56b.png)
+
+merged_CVE.png![merged_CVE](https://user-images.githubusercontent.com/77504755/125775461-a9169e3d-3b6f-464d-acbd-f82df0382147.png)
+
+
 # Checking vcf coverage
 
 ````
@@ -411,11 +418,12 @@ dev.off()
 ## Plot CMH -log10
 # Control vs. SSD-reverse
 
-CVE_pval_plot.png![CVE_pval_plot](https://user-images.githubusercontent.com/77504755/124979733-6d672f00-e001-11eb-9522-9cdc01f1f325.png)
+CVE_pval_plot.png![CVE_pval_plot](https://user-images.githubusercontent.com/77504755/125775510-a4b78588-172b-404f-8d80-94c8a6275473.png)
+
 
 # Large vs. Small
 
-LVS_pval_plot.png![LVS_pval_plot](https://user-images.githubusercontent.com/77504755/124979750-75bf6a00-e001-11eb-8228-10e223540b6a.png)
+LVS_pval_plot.png![LVS_pval_plot](https://user-images.githubusercontent.com/77504755/125775533-a6b0fbc0-0f2a-4f32-bbec-5f08b17446cc.png)
 
 ## Creating a suspicious coverage .gff
 
