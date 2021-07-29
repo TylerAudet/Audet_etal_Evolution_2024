@@ -186,9 +186,12 @@ AVE <- AVE[AVE$X2!='NaN',]
 AVE <- AVE[AVE$X3!='NaN',]
 #598731
 
-          
-LVS <- LVS[LVS$L_vs_S!='NaN',]
-CVE <- CVE[CVE$C_vs_E!='NaN',]
+# LVS has 896908
+
+LVS <- LVS[LVS$X4!='NaN',]
+#695839
+        
+
 CVE<-na.omit(CVE)
 LVS<-na.omit(LVS)
 AVE<-na.omit(AVE)
@@ -209,12 +212,12 @@ write.table(AVE, file = "/2/scratch/TylerA/SSD/merged/merged_AVE.fst", sep = "\t
 
 #Reading table on local
 #data<-read.table("~/Desktop/merged_AVE.fst",header=TRUE)
-data2L<-data[data$ID.Chromosome=="2L",]
-data2R<-data[data$ID.Chromosome=="2R",]
-data3L<-data[data$ID.Chromosome=="3L",]
-data3R<-data[data$ID.Chromosome=="3R",]
-data4<-data[data$ID.Chromosome=="4",]
-dataX<-data[data$ID.Chromosome=="X",]
+data2L<-data[data$Chromosome=="2L",]
+data2R<-data[data$Chromosome=="2R",]
+data3L<-data[data$Chromosome=="3L",]
+data3R<-data[data$Chromosome=="3R",]
+data4<-data[data$Chromosome=="4",]
+dataX<-data[data$Chromosome=="X",]
 
 sliding_window<-function(data,window){
 temp.vec=vector("list",0)
