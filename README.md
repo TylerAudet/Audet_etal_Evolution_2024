@@ -145,10 +145,10 @@ library(ggplot2)
 ##### Convert sync file to poolfstat file, and call SNPS
 
 # We first have to give haploid sizes of each pool.
-psizes <- as.numeric(c('200','200','200','200','200','200','200','200'))
+psizes <- as.numeric(c('400','400','400','400'))
 
 # Then we give the names of each pool/sample.
-pnames <- as.character(c('C1','C2','E1','E2','L1','L2','S1','S2'))
+pnames <- as.character(c('C','E','L','S'))
 
 # Here is where we read the sync file and call SNPs. The input file must have the '.sync' extension, and can also be gzipped, like in the example below. The parameters to note are: 
 
@@ -158,46 +158,167 @@ pnames <- as.character(c('C1','C2','E1','E2','L1','L2','S1','S2'))
 #4) min.maf = the minimum allele frequency (over all pools) for a SNP to be called (note this is obtained from dividing the read counts for the minor allele over the total read coverage) 
 #5) nlines.per.readblock = number of lines in sync file to be read simultaneously 
 
-SG.pooldata <- vcf2pooldata(vcf.file = "/2/scratch/TylerA/SSD/bwamap/combined_variants.vcf", poolsizes = psizes, poolnames = pnames)
+SG.pooldata <- vcf2pooldata(vcf.file = "/2/scratch/TylerA/SSD/merged/merged_everything_noindel.vcf", poolsizes = psizes, poolnames = pnames)
+
+
+#Data consists of 896908 SNPs for 4 Pools
+
 
 ##### And we can compute pairwise FSTs
-SG.pair.fst <- computePairwiseFSTmatrix(SG.pooldata, method = "Anova",
+SG.pair.fst <- compute.pairwiseFST(SG.pooldata, method = "Anova",
                                         output.snp.values = TRUE)
 
-test<-as.matrix(SG.pair.fst$PairwiseSnpFST)
-crap <- data.frame(SG.pooldata@snp.info, test[,c(2,3,8,9,24,25,26,27)])
+test<-as.matrix(SG.pair.fst@PairwiseSnpFST)
+crap <- data.frame(SG.pooldata@snp.info, test[,c(1,4,5,6)])
 
+CVE <- data.frame(crap[c(1,2,5)])
+AVE <- data.frame(crap[c(1,2,5,6,7)])
+LVS <- data.frame(crap[c(1,2,8)])
 
-CVE <- data.frame(crap[c(1,2,5,6,7,8)])
-LVS <- data.frame(crap[c(1,2,9,10,11,12)])
+#AVE has 762922
 
+AVE <- AVE[AVE$X1!='NaN',]
+#724218 SNPs
 
+AVE <- AVE[AVE$X2!='NaN',]
+#635123
 
-CVE<-data.frame(ID=CVE[,c(1:2)], Means=rowMeans(CVE[,-c(1:2)], na.rm=TRUE))
-LVS<-data.frame(ID=LVS[,c(1:2)], Means=rowMeans(LVS[,-c(1:2)], na.rm=TRUE))
+AVE <- AVE[AVE$X3!='NaN',]
+#598731
 
-CVE <- CVE[CVE$Means!='NaN',]
-LVS <- LVS[LVS$Means!='NaN',]
+          
+LVS <- LVS[LVS$L_vs_S!='NaN',]
+CVE <- CVE[CVE$C_vs_E!='NaN',]
+CVE<-na.omit(CVE)
+LVS<-na.omit(LVS)
+AVE<-na.omit(AVE)
 
-write.table(CVE, file = "/2/scratch/TylerA/SSD/bwamap/CVE.fst", sep = "\t",
+AVE<-data.frame(ID=AVE[,c(1:2)], Means=rowMeans(AVE[,-c(1:2)], na.rm=TRUE))
+
+write.table(CVE, file = "/2/scratch/TylerA/SSD/merged/merged_CVE.fst", sep = "\t",
             row.names = FALSE, quote = FALSE)
-write.table(LVS, file = "/2/scratch/TylerA/SSD/bwamap/LVS.fst", sep = "\t",
+write.table(LVS, file = "/2/scratch/TylerA/SSD/merged/merged_LVS.fst", sep = "\t",
             row.names = FALSE, quote = FALSE)
+write.table(AVE, file = "/2/scratch/TylerA/SSD/merged/merged_AVE.fst", sep = "\t",
+            row.names = FALSE, quote = FALSE)
+ 
+            
+# Rolling average code
+# This requires changing the name of the file to data, in the future I'm going to make this a shell script. Also requires doing it chromosome by chromosome, this also needs to be fixed in the future.
+
+
+#Reading table on local
+#data<-read.table("~/Desktop/merged_AVE.fst",header=TRUE)
+data2L<-data[data$ID.Chromosome=="2L",]
+data2R<-data[data$ID.Chromosome=="2R",]
+data3L<-data[data$ID.Chromosome=="3L",]
+data3R<-data[data$ID.Chromosome=="3R",]
+data4<-data[data$ID.Chromosome=="4",]
+dataX<-data[data$ID.Chromosome=="X",]
+
+sliding_window<-function(data,window){
+temp.vec=vector("list",0)
+results.vec=vector("list",0)
+x=0
+y=1000
+i=1
+while (i <= length(data$Means)){
+ if (data$ID.Position[i] >= x & data$ID.Position[i] < y) {
+    temp.vec<-append(temp.vec,data$Means[i])
+    i<-i+1
+  } else {
+    if (data$ID.Position[i] <y) {
+      temp.vec<-append(temp.vec,NA)
+      i<-i+1
+      } else {
+    temp.vec<-as.numeric(temp.vec)
+    results.vec <- append(results.vec,mean(temp.vec, na.omit=TRUE))
+    temp.vec=vector("list",0)
+    x <- x + window
+    y <- y + window
+      }
+  }
+}
+print(results.vec)
+}
+
+
+
+fst2L<-sliding_window(data2L,1000)
+fst2R<-sliding_window(data2R,1000)
+fst3L<-sliding_window(data3L,1000)
+fst3R<-sliding_window(data3R,1000)
+fst4<-sliding_window(data4,1000)
+fstX<-sliding_window(dataX,1000)
+
+fst2L <- as.matrix(fst2L)
+fst2R <- as.matrix(fst2R)
+fst3L <- as.matrix(fst3L)
+fst3R <- as.matrix(fst3R)
+fst4 <- as.matrix(fst4)
+fstX <- as.matrix(fstX)
+
+fst2L <- fst2L[which(fst2L!="NaN"),]
+fst2R <- fst2R[which(fst2R!="NaN"),]
+fst3L <- fst3L[which(fst3L!="NaN"),]
+fst3R <- fst3R[which(fst3R!="NaN"),]
+fst4 <- fst4[which(fst4!="NaN"),]
+fstX <- fstX[which(fstX!="NaN"),]
+
+fst2L<-cbind(rep("2L",length(fst2L)),fst2L)
+fst2R<-cbind(rep("2R",length(fst2R)),fst2R)
+fst3L<-cbind(rep("3L",length(fst3L)),fst3L)
+fst3R<-cbind(rep("3R",length(fst3R)),fst3R)
+fst4<-cbind(rep("4",length(fst4)),fst4)
+fstX<-cbind(rep("X",length(fstX)),fstX)
+fst_data<-rbind(fstX,fst2L,fst2R,fst3L,fst3R,fst4)
+
+crap<-c("chr","fst")
+colnames(fst_data)<-crap
+fst_data<-as.data.frame(fst_data)
+
+g <- nrow(fst_data[which(fst_data$chr=='2L'),])
+h <- nrow(fst_data[which(fst_data$chr=='2R'),])
+i <- nrow(fst_data[which(fst_data$chr=='3L'),])
+j <- nrow(fst_data[which(fst_data$chr=='3R'),])
+k <- nrow(fst_data[which(fst_data$chr=='4'),])
+l <- nrow(fst_data[which(fst_data$chr=='X'),])
+
+fst_data$number <-  c((1:l),
+                   (l+1):(l+g), 
+                   (l+g+1):(l+g+h), 
+                   (l+g+h+1):(l+g+h+i),
+                   (l+g+h+i+1):(l+g+h+i+j),
+                   (l+g+h+i+j+1):(l+g+h+i+j+k))
+
+fst_data <- as.data.frame(lapply(fst_data, unlist))
+fst_data$number<-as.numeric(fst_data$number)
+fst_data$chr<-as.factor(fst_data$chr)
+
+
+
+plot<-ggplot(fst_data, aes(x=as.numeric(number), y=as.numeric(fst), color=as.factor(chr))) +
+  geom_point(size=0.5, show.legend = F, alpha = 0.2) +
+  theme(panel.background = element_blank()) +
+  scale_colour_manual(values=c("seagreen", "darkslateblue", 'darkred', 'darkorchid4', 'darkolivegreen', 'darkblue')) +
+  theme(text = element_text(size=20),
+        axis.text.x= element_text(size=15), 
+        axis.text.y= element_text(size=15))
+        
+        
+# Need to change file name !!!!!!!!!
+
+png("/2/scratch/TylerA/SSD/bwamap/AVE_Fst.png",type="cairo")
+plot
+dev.off()
+
 ````
 
 ## Plot Fst
 
-plot_fst.sh (calls plot_fst.R)
+# Experimental vs. All other treatments
 
-CVE.png![CVE](https://user-images.githubusercontent.com/77504755/125079376-87e8e900-e091-11eb-8f3b-f546f6e49689.png)
-
-LVS.png![LVS](https://user-images.githubusercontent.com/77504755/125079399-8e776080-e091-11eb-8674-a1d20de6ce22.png)
-
-## Plot with replicates merged
-
-merged_LVS.png![merged_LVS](https://user-images.githubusercontent.com/77504755/125775434-16fc2620-88bf-4e73-9031-764b56c9c56b.png)
-
-merged_CVE.png![merged_CVE](https://user-images.githubusercontent.com/77504755/125775461-a9169e3d-3b6f-464d-acbd-f82df0382147.png)
+AVE_Fst.png![AVE_Fst](https://user-images.githubusercontent.com/77504755/127500637-8264e8d5-9e5d-4122-9a0f-a07affd8b8a7.png)
 
 
 # Checking vcf coverage
