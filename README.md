@@ -658,6 +658,12 @@ write.table(test, file = "/2/scratch/TylerA/SSD/suspicious_coverage.gff", sep = 
             row.names = FALSE, quote = FALSE)
 ````
 
+I want to pull out all spots in merged_AVE with an fst > 0.75 and then compare them to spots with a CMH > 
+
+````
+awk '$3 > 0.75  {print $1, $2, $3}' merged_AVE.fst > highfst_AVE.fst
+````
+
 
 
 
