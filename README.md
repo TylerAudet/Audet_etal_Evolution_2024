@@ -732,3 +732,35 @@ bedtools intersect -a highpval_CVE.bed -b highfst_AVE.bed > matches.bed
 
 There are 462 overlapping regions
 
+````
+bedtools intersect -a dmel-all-r6.23.gtf -b matches.bed
+
+sed 's/chr//g' matches.bed > matches-vcf.bed
+
+vcftools --vcf merged_everything_noindel.vcf --bed matches-vcf.bed --out genes-of-interest --recode --keep-INFO-all
+
+java -Xmx32g -jar /usr/local/gatk/GenomeAnalysisTK.jar -R /2/scratch/TylerA/Dmelgenome/gatk/dmel-all-chromosome-r6.23.fasta -V genes-of-interest.recode.vcf  -T VariantsToTable -F CHROM -F POS -F TYPE -F REF -F ALT -o interesting_loci.table
+
+java -Xmx8g -jar ~/bin/snpEff/snpEff.jar -ud 0 Drosophila_melanogaster interesting_loci.table > loci.ann.table
+
+grep -v 'NO_VARIATION'  loci.ann.table > loci.ann.filtered.table
+grep -v 'intron_variant'  loci.ann.filtered.table > loci.ann.filtered.twice.table
+
+awk '{print $8}'  > loci.ann.filtered.twice.table test.table
+
+awk -F '[\|]' '{ print $4 }' test.table > gene_ids.table
+
+
+awk '{print $1 " " $2}' loci.ann.filtered.twice.table test.table > locations.table
+
+#First 6 lines are uninformative or white space
+
+sed -i '1,6d' locations.table
+sed -i '1,6d' gene_ids.table
+````
+This gives me 130 genes that have both an fst > 0.75 and a CMH padj < 0.01 with SNPs in a genic region.
+
+
+
+
+
