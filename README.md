@@ -658,15 +658,77 @@ write.table(test, file = "/2/scratch/TylerA/SSD/suspicious_coverage.gff", sep = 
             row.names = FALSE, quote = FALSE)
 ````
 
-I want to pull out all spots in merged_AVE with an fst > 0.75 and then compare them to spots with a CMH > 50
+I want to pull out all spots in merged_AVE with an fst > 0.75 and then compare them to spots with a CMH padj < 0.01
 
 ````
+
 awk '$3 > 0.75  {print $1, $2, $3}' merged_AVE.fst > highfst_AVE.fst
 
-awk '$6 > 50 {print $2, $3, $5}' CVE_pval.csv > highpval_CVE.csv
+awk -F "," '$5 < 0.01 {print $2, $3, $5}' CVE_pval.csv > highpval_CVE.csv
+
+sed "s/\"//g;s/,/\t/g" highpval_CVE.csv > highpval_CVE.cmh
+
 ````
 
+There are no matching SNPs between these two files. So I'm going to make a bed file with a +/- 10bp buffer for each to look for close together SNPs
+
+````
+rm(list=ls())
+
+data<-read.table("/2/scratch/TylerA/SSD/merged/highfst_AVE.fst")
+
+fst<-data
+
+fst$V2<-as.numeric(fst$V2)
+
+fst<-fst[-1,]
+
+fst$start<-fst$V2-10
+fst$end<-fst$V2+10
+
+fst<-data.frame(fst[c(1,4,5)])
+
+fst$V1 <- sub("^", "chr", fst$V1 )
+
+headers<-c("chrom","chromStart","chromEnd")
+colnames(fst)<-headers
 
 
 
+write.table(fst,file="/2/scratch/TylerA/SSD/merged/highfst_AVE.bed",sep='\t',col.names=FALSE,row.names=FALSE,quote=FALSE)
+
+
+cmh<-read.table("/2/scratch/TylerA/SSD/merged/highpval_CVE.cmh")
+
+
+cmh$V2<-as.numeric(cmh$V2)
+
+cmh<-cmh[-1,]
+cmh<-cmh[-1,]
+cmh<-cmh[-1,]
+cmh<-cmh[-1,]
+
+cmh$start<-cmh$V2-10
+cmh$end<-cmh$V2+10
+
+cmh<-data.frame(cmh[c(1,4,5)])
+
+cmh$V1 <- sub("^", "chr", cmh$V1 )
+
+colnames(cmh)<-headers
+colnames(cmh)<-NA
+
+write.table(cmh,file="/2/scratch/TylerA/SSD/merged/highpval_CVE.bed",sep='\t',col.names=FALSE,row.names=FALSE,quote=FALSE)
+
+
+````
+
+Now I want to look for overlap in these bed files
+
+````
+bedtools intersect -a highpval_CVE.bed -b highfst_AVE.bed > matches.bed
+
+````
+
+There are 462 overlapping regions
 
