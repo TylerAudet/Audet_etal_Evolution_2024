@@ -158,10 +158,10 @@ pnames <- as.character(c('C','E','L','S'))
 #4) min.maf = the minimum allele frequency (over all pools) for a SNP to be called (note this is obtained from dividing the read counts for the minor allele over the total read coverage) 
 #5) nlines.per.readblock = number of lines in sync file to be read simultaneously 
 
-SG.pooldata <- vcf2pooldata(vcf.file = "/2/scratch/TylerA/SSD/merged/merged_everything_noindel.vcf", poolsizes = psizes, poolnames = pnames)
+SG.pooldata <- vcf2pooldata(vcf.file = "/2/scratch/TylerA/SSD/merged/merged_everything_noindel.vcf", poolsizes = psizes, poolnames = pnames, min.cov.per.pool = 50, min.maf = 0.05)
 
 
-#Data consists of 896908 SNPs for 4 Pools
+#Data consists of 676939 SNPs for 4 Pools
 
 
 ##### And we can compute pairwise FSTs
@@ -196,6 +196,9 @@ CVE<-na.omit(CVE)
 LVS<-na.omit(LVS)
 AVE<-na.omit(AVE)
 
+headers<-c("ID.Chromosome","ID.Position","Means")
+colnames(LVS)<-headers
+
 AVE<-data.frame(ID=AVE[,c(1:2)], Means=rowMeans(AVE[,-c(1:2)], na.rm=TRUE))
 
 write.table(CVE, file = "/2/scratch/TylerA/SSD/merged/merged_CVE.fst", sep = "\t",
@@ -211,13 +214,18 @@ write.table(AVE, file = "/2/scratch/TylerA/SSD/merged/merged_AVE.fst", sep = "\t
 
 
 #Reading table on local
-#data<-read.table("~/Desktop/merged_AVE.fst",header=TRUE)
-data2L<-data[data$Chromosome=="2L",]
-data2R<-data[data$Chromosome=="2R",]
-data3L<-data[data$Chromosome=="3L",]
-data3R<-data[data$Chromosome=="3R",]
-data4<-data[data$Chromosome=="4",]
-dataX<-data[data$Chromosome=="X",]
+data<-read.table("/2/scratch/TylerA/SSD/merged/merged_AVE.fst",header=TRUE)
+
+# OR #
+
+data<-read.table("/2/scratch/TylerA/SSD/merged/merged_LVS.fst",header=TRUE)
+
+data2L<-data[data$ID.Chromosome=="2L",]
+data2R<-data[data$ID.Chromosome=="2R",]
+data3L<-data[data$ID.Chromosome=="3L",]
+data3R<-data[data$ID.Chromosome=="3R",]
+data4<-data[data$ID.Chromosome=="4",]
+dataX<-data[data$ID.Chromosome=="X",]
 
 sliding_window<-function(data,window){
 temp.vec=vector("list",0)
@@ -311,7 +319,7 @@ plot<-ggplot(fst_data, aes(x=as.numeric(number), y=as.numeric(fst), color=as.fac
         
 # Need to change file name !!!!!!!!!
 
-png("/2/scratch/TylerA/SSD/bwamap/AVE_Fst.png",type="cairo")
+png("/2/scratch/TylerA/SSD/bwamap/LVS_Fst.png",type="cairo")
 plot
 dev.off()
 
