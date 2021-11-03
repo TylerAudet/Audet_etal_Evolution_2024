@@ -768,6 +768,127 @@ sed -i '1,6d' gene_ids.table
 ````
 This gives me 130 genes that have both an fst > 0.75 and a CMH padj < 0.01 with SNPs in a genic region.
 
+# Calculataing Tajima's D
+
+````
+samtools mpileup -Q 20 -q 20 -d 450 \
+-f /2/scratch/TylerA/Dmelgenome/gatk/dmel-all-chromosome-r6.23.fa \
+/2/scratch/TylerA/SSD/bwamap/E*.bam \
+-o Experimental.mpileup
+
+perl /home/tylera/bin/popoolation_1.2.2/basic-pipeline/filter-pileup-by-gtf.pl --gtf /2/scratch/TylerA/Dmelgenome/dmel-all-chromosome-r6.23.fasta.out.gff --input ./Experimental.mpileup --output ./Experimental_norepeats.mpileup
+
+perl /home/tylera/bin/popoolation_1.2.2/basic-pipeline/filter-pileup-by-gtf.pl --gtf /2/scratch/TylerA/SSD/suspicious_coverage.gff --input ./Experimental_norepeats.mpileup --output ./Experimental_clean.mpileup
+
+perl /home/tylera/bin/popoolation2_1201/indel_filtering/identify-indel-regions.pl --input ./Experimental_clean.mpileup --output ./Experimental_clean.gtf --indel-window 10
+
+perl /home/tylera/bin/popoolation_1.2.2/basic-pipeline/filter-pileup-by-gtf.pl --gtf ./Experimental_clean.gtf --input ./Experimental_clean.mpileup --output ./Experimental_clean_noindel.mpileup
+
+
+awk '{print $1, $2, $3, $4, $5, $6}' Experimental_clean_noindel.pileup > E1?.pileup
+awk '{print $1, $2, $3, $7, $8, $9}' Experimental_clean_noindel.pileup > E2?.pileup
+
+awk '$1 ~ "2L"' E1?.pileup > 2LE1.pileup
+awk '$1 ~ "2R"' E1?.pileup > 2RE1.pileup
+awk '$1 ~ "3L"' E1?.pileup > 3LE1.pileup
+awk '$1 ~ "3R"' E1?.pileup > 3RE1.pileup
+awk '$1 ~ "X"' E1?.pileup > XE1.pileup
+awk '$1 ~ "4"' E1?.pileup > 4E1.pileup
+cat 2LE1.pileup 2RE1.pileup 3LE1.pileup 3RE1.pileup XE1.pileup 4E1.pileup > E1?.pileup
+
+awk '$1 ~ "2L"' E2?.pileup > 2LE2.pileup
+awk '$1 ~ "2R"' E2?.pileup > 2RE2.pileup
+awk '$1 ~ "3L"' E2?.pileup > 3LE2.pileup
+awk '$1 ~ "3R"' E2?.pileup > 3RE2.pileup
+awk '$1 ~ "X"' E2?.pileup > XE2.pileup
+awk '$1 ~ "4"' E2?.pileup > 4E2.pileup
+cat 2LE2.pileup 2RE2.pileup 3LE2.pileup 3RE2.pileup XE2.pileup 4E2.pileup > E2?.pileup
+
+
+#Coverage filter on popoolation doesn't work
+#perl /home/tylera/bin/popoolation_1.2.2/basic-pipeline/subsample-pileup.pl --input ./E1?.pileup --output ./E1?_coverage300.pileup \
+#--target-coverage 250 --max-coverage 400 --method withreplace --fastq-type illumina
+
+#perl /home/tylera/bin/popoolation_1.2.2/basic-pipeline/subsample-pileup.pl --input ./E2?.pileup --output ./E2?_coverage300.pileup \
+#--target-coverage 250 --max-coverage 400 --method withreplace --fastq-type illumina
+
+
+awk '{if ($4 > 250 && $4 < 400) {print $1, $2, $3, $4, $5, $6}}' E1\?.pileup > E1_coverage250.pileup
+awk '{if ($4 > 250 && $4 < 400) {print $1, $2, $3, $4, $5, $6}}' E2\?.pileup > E2_coverage250.pileup
+
+perl /home/tylera/bin/popoolation_1.2.2/Variance-sliding.pl \
+--measure D --input ./E1_coverage250.pileup --output ./E1?_coverage300.d \
+--pool-size 100 --min-count 2 --min-coverage 25 --window-size 1000 \
+--step-size 1000
+
+perl /home/tylera/bin/popoolation_1.2.2/Variance-sliding.pl \
+--measure D --input ./E2_coverage250.pileup --output ./E2?_coverage300.d \
+--pool-size 100 --min-count 2 --min-coverage 25 --window-size 1000 \
+--step-size 1000
+````
+
+Now graphing in R
+
+````
+library(ggplot2)
+
+data<-read.table("/2/scratch/TylerA/SSD/bwamap/E1?_coverage300.d")
+ddat2<-data
+headers<-c("chr","pos","SNP","cov","D")
+
+# Convert na in column D to 0
+
+ddat2 <- data.frame(lapply(ddat2, function(x) {
+                 gsub("na", "0", x)
+             }))
+
+ddat22L <- ddat2[which(ddat2$chr=='2L'),]
+ddat22R <- ddat2[which(ddat2$chr=='2R'),]
+ddat23L <- ddat2[which(ddat2$chr=='3L'),]
+ddat23R <- ddat2[which(ddat2$chr=='3R'),]
+ddat24 <- ddat2[which(ddat2$chr=='4'),]
+ddat2X <- ddat2[which(ddat2$chr=='X'),]
+ddat2 <- rbind(ddat2X, ddat22L, ddat22R, ddat23L, ddat23R, ddat24)
+
+
+g <- nrow(ddat2[which(ddat2$chr=='2L'),])
+h <- nrow(ddat2[which(ddat2$chr=='2R'),])
+i <- nrow(ddat2[which(ddat2$chr=='3L'),])
+j <- nrow(ddat2[which(ddat2$chr=='3R'),])
+k <- nrow(ddat2[which(ddat2$chr=='4'),])
+l <- nrow(ddat2[which(ddat2$chr=='X'),])
+
+ddat2$number <-  c((1:l),
+                   (l+1):(l+g), 
+                   (l+g+1):(l+g+h), 
+                   (l+g+h+1):(l+g+h+i),
+                   (l+g+h+i+1):(l+g+h+i+j),
+                   (l+g+h+i+j+1):(l+g+h+i+j+k))
+
+
+plot<-ggplot(ddat2, aes(x=number, y=D, color=chr)) +
+  geom_point(size=0.5, show.legend = F, alpha=0.25) +
+  theme(panel.background = element_blank()) +
+  scale_colour_manual(values=c("seagreen", "darkslateblue", 'darkred', 'darkorchid4', 'darkolivegreen', 'darkblue')) +
+  theme(text = element_text(size=20),
+        axis.text.x= element_text(size=15), 
+        axis.text.y= element_text(size=15))
+        
+        
+png("/2/scratch/TylerA/SSD/bwamap/E1_D.png",type="cairo")
+plot
+dev.off()
+
+
+# These plots are incoherent
+![E1_D](https://user-images.githubusercontent.com/77504755/140098637-d1df5113-c267-4afc-8bed-9b76d15dc007.png)
+````
+
+
+# extracting areas of interest that have a high Tajima's D
+
+
+
 
 
 
