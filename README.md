@@ -81,51 +81,118 @@ perl /home/tylera/bin/popoolation_1.2.2/basic-pipeline/filter-pileup-by-gtf.pl -
 
 ````
 
-## Make a VCF
-
-make_vcf.sh
+## Make a VCF with poolSNP
 
 for sexes combined:
 ````
-java -Xmx32g -jar \
-~/bin/VarScan.v2.3.9.jar \
-mpileup2indel \
-./Sexes_combined_norepeats_nosus.mpileup \
---min-reads2 5 \
---min-coverage 50 \
---p-value 0.1 \
---min-var-freq 0.01 \
---min-freq-for-hom 1 \
---min-avg-qual 20 \
---variants \
---output-vcf 1 \
-> ./combined_indels.vcf
 
-#112150681 bases in pileup file
-#1450110 variant positions (1237206 SNP, 215353 indel)
-#37846 were failed by the strand-filter
-#191067 variant positions reported (2376 SNP, 191067 indel)
+# Need to pull out chromosome by chromosome because it is very memory intensive to ru poolSNP on everything at once
+awk '{if ($1 == "2L") {print $0}}' merged_norepeat_nosus.mpileup > 2L.mpileup
+awk '{if ($1 == "2R") {print $0}}' merged_norepeat_nosus.mpileup > 2R.mpileup
+awk '{if ($1 == "3L") {print $0}}' merged_norepeat_nosus.mpileup > 3L.mpileup
+awk '{if ($1 == "3R") {print $0}}' merged_norepeat_nosus.mpileup > 3R.mpileup
+awk '{if ($1 == "X") {print $0}}' merged_norepeat_nosus.mpileup > X.mpileup
+awk '{if ($1 == "4") {print $0}}' merged_norepeat_nosus.mpileup > 4.mpileup
 
-java -Xmx32g -jar \
-~/bin/VarScan.v2.3.9.jar \
-mpileup2snp \
-./Sexes_combined_norepeat_nosus_noindel.mpileup \
---min-reads2 5 \
---min-coverage 50 \
---p-value 0.1 \
---min-var-freq 0.01 \
---min-freq-for-hom 1 \
---min-avg-qual 20 \
---variants \
---output-vcf 1 \
-> ./combined_variants.vcf
+# Run poolSNP one chromosome at a time
+bash /home/tylera/bin/PoolSNP-master/PoolSNP.sh \
+mpileup=/2/scratch/TylerA/SSD/merged/2L.mpileup \
+reference=/2/scratch/TylerA/Dmelgenome/dmel-all-chromosome-r6.23.fasta \
+names=C,E,L,S \
+max-cov=0.98 \
+min-cov=40 \
+min-count=20 \
+min-freq=0.01 \
+miss-frac=0.2 \
+jobs=16 \
+BS=1 \
+output=/2/scratch/TylerA/SSD/poolSNP/poolSNP_variants_2L
 
-#88257778 bases in pileup file
-#910305 variant positions (910305 SNP, 0 indel)
-#8123 were failed by the strand-filter
-#902182 variant positions reported (902182 SNP, 0 indel)
+bash /home/tylera/bin/PoolSNP-master/PoolSNP.sh \
+mpileup=/2/scratch/TylerA/SSD/merged/2R.mpileup \
+reference=/2/scratch/TylerA/Dmelgenome/dmel-all-chromosome-r6.23.fasta \
+names=C,E,L,S \
+max-cov=0.98 \
+min-cov=40 \
+min-count=20 \
+min-freq=0.01 \
+miss-frac=0.2 \
+jobs=16 \
+BS=1 \
+output=/2/scratch/TylerA/SSD/poolSNP/poolSNP_variants_2R
+
+bash /home/tylera/bin/PoolSNP-master/PoolSNP.sh \
+mpileup=/2/scratch/TylerA/SSD/merged/3L.mpileup \
+reference=/2/scratch/TylerA/Dmelgenome/dmel-all-chromosome-r6.23.fasta \
+names=C,E,L,S \
+max-cov=0.98 \
+min-cov=40 \
+min-count=20 \
+min-freq=0.01 \
+miss-frac=0.2 \
+jobs=16 \
+BS=1 \
+output=/2/scratch/TylerA/SSD/poolSNP/poolSNP_variants_3L
+
+bash /home/tylera/bin/PoolSNP-master/PoolSNP.sh \
+mpileup=/2/scratch/TylerA/SSD/merged/3R.mpileup \
+reference=/2/scratch/TylerA/Dmelgenome/dmel-all-chromosome-r6.23.fasta \
+names=C,E,L,S \
+max-cov=0.98 \
+min-cov=40 \
+min-count=20 \
+min-freq=0.01 \
+miss-frac=0.2 \
+jobs=16 \
+BS=1 \
+output=/2/scratch/TylerA/SSD/poolSNP/poolSNP_variants_3R
+
+bash /home/tylera/bin/PoolSNP-master/PoolSNP.sh \
+mpileup=/2/scratch/TylerA/SSD/merged/4.mpileup \
+reference=/2/scratch/TylerA/Dmelgenome/dmel-all-chromosome-r6.23.fasta \
+names=C,E,L,S \
+max-cov=0.98 \
+min-cov=40 \
+min-count=20 \
+min-freq=0.01 \
+miss-frac=0.2 \
+jobs=16 \
+BS=1 \
+output=/2/scratch/TylerA/SSD/poolSNP/poolSNP_variants_4
+
+bash /home/tylera/bin/PoolSNP-master/PoolSNP.sh \
+mpileup=/2/scratch/TylerA/SSD/merged/X.mpileup \
+reference=/2/scratch/TylerA/Dmelgenome/dmel-all-chromosome-r6.23.fasta \
+names=C,E,L,S \
+max-cov=0.98 \
+min-cov=40 \
+min-count=20 \
+min-freq=0.01 \
+miss-frac=0.2 \
+jobs=16 \
+BS=1 \
+output=/2/scratch/TylerA/SSD/poolSNP/poolSNP_variants_X
+
+# Defaults to gzip files, so all files need to be gunzipped to sed and cat them
+gunzip poolSNP_variants_2L.vcf.gz
+gunzip poolSNP_variants_2R.vcf.gz
+gunzip poolSNP_variants_3L.vcf.gz
+gunzip poolSNP_variants_3R.vcf.gz
+gunzip poolSNP_variants_4.vcf.gz
+gunzip poolSNP_variants_X.vcf.gz
+
+# Remove the first 18 lines which are summaries from all files other than 2L so when they are cat together they don't have summaries stuck in the middle
+sed '1,18d' poolSNP_variants_2R.vcf > 2R.vcf
+sed '1,18d' poolSNP_variants_3L.vcf > 3L.vcf
+sed '1,18d' poolSNP_variants_3R.vcf > 3R.vcf
+sed '1,18d' poolSNP_variants_X.vcf > X.vcf
+sed '1,18d' poolSNP_variants_4.vcf > 4.vcf
+
+# Cat all back together to get a completed VCF
+cat poolSNP_variants_2L.vcf 2R.vcf 3L.vcf 3R.vcf 4.vcf X.vcf > merged_poolSNP.vcf
 
 ````
+
 for replicates combined min coverage is doubled because coverage should double:
 
 ## Make a sync
@@ -142,7 +209,6 @@ rm(list=ls())
 library(poolfstat)
 library(WriteXLS)
 library(ggplot2)
-##### Convert sync file to poolfstat file, and call SNPS
 
 # We first have to give haploid sizes of each pool.
 psizes <- as.numeric(c('400','400','400','400'))
@@ -150,75 +216,84 @@ psizes <- as.numeric(c('400','400','400','400'))
 # Then we give the names of each pool/sample.
 pnames <- as.character(c('C','E','L','S'))
 
-# Here is where we read the sync file and call SNPs. The input file must have the '.sync' extension, and can also be gzipped, like in the example below. The parameters to note are: 
-
+# Here is where we read the vcf file and call SNPs. 
 #1) min.rc =  the minimum # reads that an allele needs to have (across all pools) to be called 
 #2) min.cov.per.pool = the minimum allowed read count per pool for SNP to be called
 #3) max.cov.per.pool = the maximum read count per pool for SNP to be called 
 #4) min.maf = the minimum allele frequency (over all pools) for a SNP to be called (note this is obtained from dividing the read counts for the minor allele over the total read coverage) 
 #5) nlines.per.readblock = number of lines in sync file to be read simultaneously 
 
-SG.pooldata <- vcf2pooldata(vcf.file = "/2/scratch/TylerA/SSD/merged/merged_everything_noindel.vcf", poolsizes = psizes, poolnames = pnames, min.cov.per.pool = 50, min.maf = 0.05)
+SG.pooldata <- vcf2pooldata(vcf.file = "/2/scratch/TylerA/SSD/poolSNP/merged_poolSNP.vcf", poolsizes = psizes, poolnames = pnames, min.cov.per.pool = 50, min.maf = 0.05)
 
-
-#Data consists of 676939 SNPs for 4 Pools
+#Data consists of 872491 SNPs for 4 Pools
 
 
 ##### And we can compute pairwise FSTs
 SG.pair.fst <- compute.pairwiseFST(SG.pooldata, method = "Anova",
                                         output.snp.values = TRUE)
 
+# Extracting fst as a matrix and then making a data.frame with the snp info associated with the fst values
 test<-as.matrix(SG.pair.fst@PairwiseSnpFST)
 crap <- data.frame(SG.pooldata@snp.info, test[,c(1,4,5,6)])
+
+# Extract the valuess associated with the comparisons we care about
+#CVE = controls vs. experimental
+#AVE = all samples vs. the experimental
+#LVS = large vs. small
 
 CVE <- data.frame(crap[c(1,2,5)])
 AVE <- data.frame(crap[c(1,2,5,6,7)])
 LVS <- data.frame(crap[c(1,2,8)])
 
-#AVE has 762922
+#AVE has 872491 snps
 
 AVE <- AVE[AVE$X1!='NaN',]
-#724218 SNPs
+#818705  SNPs after removing NaNs from column X1
 
 AVE <- AVE[AVE$X2!='NaN',]
-#635123
+#745111
 
 AVE <- AVE[AVE$X3!='NaN',]
-#598731
+#706251
 
-# LVS has 896908
+# LVS has 872491
 
 LVS <- LVS[LVS$X4!='NaN',]
-#695839
+#802721
         
-
 CVE<-na.omit(CVE)
 LVS<-na.omit(LVS)
 AVE<-na.omit(AVE)
 
+# Changing headers for clarity and to match the rolling average code
+
 headers<-c("ID.Chromosome","ID.Position","Means")
 colnames(LVS)<-headers
 
+
 AVE<-data.frame(ID=AVE[,c(1:2)], Means=rowMeans(AVE[,-c(1:2)], na.rm=TRUE))
 
-write.table(CVE, file = "/2/scratch/TylerA/SSD/merged/merged_CVE.fst", sep = "\t",
+# Make data tables to work with without having to re-run fst code
+
+write.table(CVE, file = "/2/scratch/TylerA/SSD/poolSNP/CVE.fst", sep = "\t",
             row.names = FALSE, quote = FALSE)
-write.table(LVS, file = "/2/scratch/TylerA/SSD/merged/merged_LVS.fst", sep = "\t",
+write.table(LVS, file = "/2/scratch/TylerA/SSD/poolSNP/LVS.fst", sep = "\t",
             row.names = FALSE, quote = FALSE)
-write.table(AVE, file = "/2/scratch/TylerA/SSD/merged/merged_AVE.fst", sep = "\t",
+write.table(AVE, file = "/2/scratch/TylerA/SSD/poolSNP/AVE.fst", sep = "\t",
             row.names = FALSE, quote = FALSE)
  
             
 # Rolling average code
 # This requires changing the name of the file to data, in the future I'm going to make this a shell script. Also requires doing it chromosome by chromosome, this also needs to be fixed in the future.
 
-
 #Reading table on local
-data<-read.table("/2/scratch/TylerA/SSD/merged/merged_AVE.fst",header=TRUE)
+data<-read.table("/2/scratch/TylerA/SSD/poolSNP/AVE.fst",header=TRUE)
 
 # OR #
 
-data<-read.table("/2/scratch/TylerA/SSD/merged/merged_LVS.fst",header=TRUE)
+#data<-read.table("/2/scratch/TylerA/SSD/poolSNP/LVS.fst",header=TRUE)
+
+# Break everything in to chromosomes again so that two different chromosomes are not included in the same window
 
 data2L<-data[data$ID.Chromosome=="2L",]
 data2R<-data[data$ID.Chromosome=="2R",]
@@ -226,6 +301,8 @@ data3L<-data[data$ID.Chromosome=="3L",]
 data3R<-data[data$ID.Chromosome=="3R",]
 data4<-data[data$ID.Chromosome=="4",]
 dataX<-data[data$ID.Chromosome=="X",]
+
+# Sliding window function
 
 sliding_window<-function(data,window){
 temp.vec=vector("list",0)
@@ -253,7 +330,7 @@ while (i <= length(data$Means)){
 print(results.vec)
 }
 
-
+# Running sliding window function on all chromosomes
 
 fst2L<-sliding_window(data2L,1000)
 fst2R<-sliding_window(data2R,1000)
@@ -261,6 +338,8 @@ fst3L<-sliding_window(data3L,1000)
 fst3R<-sliding_window(data3R,1000)
 fst4<-sliding_window(data4,1000)
 fstX<-sliding_window(dataX,1000)
+
+# Making matrices which are easier to work with
 
 fst2L <- as.matrix(fst2L)
 fst2R <- as.matrix(fst2R)
@@ -276,6 +355,8 @@ fst3R <- fst3R[which(fst3R!="NaN"),]
 fst4 <- fst4[which(fst4!="NaN"),]
 fstX <- fstX[which(fstX!="NaN"),]
 
+# Merging all in to one file
+
 fst2L<-cbind(rep("2L",length(fst2L)),fst2L)
 fst2R<-cbind(rep("2R",length(fst2R)),fst2R)
 fst3L<-cbind(rep("3L",length(fst3L)),fst3L)
@@ -284,9 +365,13 @@ fst4<-cbind(rep("4",length(fst4)),fst4)
 fstX<-cbind(rep("X",length(fstX)),fstX)
 fst_data<-rbind(fstX,fst2L,fst2R,fst3L,fst3R,fst4)
 
+# Changing column names
+
 crap<-c("chr","fst")
 colnames(fst_data)<-crap
 fst_data<-as.data.frame(fst_data)
+
+# This code adds numeric indicators for each row to make sure the order in the plots are correct
 
 g <- nrow(fst_data[which(fst_data$chr=='2L'),])
 h <- nrow(fst_data[which(fst_data$chr=='2R'),])
@@ -306,7 +391,7 @@ fst_data <- as.data.frame(lapply(fst_data, unlist))
 fst_data$number<-as.numeric(fst_data$number)
 fst_data$chr<-as.factor(fst_data$chr)
 
-
+# Plotting
 
 plot<-ggplot(fst_data, aes(x=as.numeric(number), y=as.numeric(fst), color=as.factor(chr))) +
   geom_point(size=0.5, show.legend = F, alpha = 0.2) +
@@ -319,7 +404,7 @@ plot<-ggplot(fst_data, aes(x=as.numeric(number), y=as.numeric(fst), color=as.fac
         
 # Need to change file name !!!!!!!!!
 
-png("/2/scratch/TylerA/SSD/bwamap/LVS_Fst.png",type="cairo")
+png("/2/scratch/TylerA/SSD/poolSNP/AVE_Fst.png",type="cairo")
 plot
 dev.off()
 
@@ -331,11 +416,11 @@ dev.off()
 
 AVE_Fst.png![AVE_Fst](https://user-images.githubusercontent.com/77504755/127500637-8264e8d5-9e5d-4122-9a0f-a07affd8b8a7.png)
 
-
 # Checking vcf coverage
 
 ````
-vcftools --vcf combined_variants.vcf --site-mean-depth
+vcftools --vcf /2/scratch/TylerA/SSD/poolSNP/merged_poolSNP.vcf --site-mean-depth
+
 ````
 change name so my plot script can work
 
@@ -346,6 +431,7 @@ mv out.ldepth.mean Sexes_combined.coverage
 ````
 plot_coverage.sh
 ````
+
 ## Calculate CMH
 
 ````
@@ -411,7 +497,7 @@ dim(cov.mat)
 head(cov.mat)
 
 cov.mat2 <- cov.mat[,c(1,2,3,4)]
-cov.mat3 <- cov.mat[,c(5,6,7,8)]
+#cov.mat3 <- cov.mat[,c(5,6,7,8)]
 dim(cov.mat2)
 dim(cov.mat3)
 
@@ -461,6 +547,8 @@ data2$neg.log10 <- -log10(data2$padj)
 
 write.csv(data, "/2/scratch/TylerA/SSD/bwamap/CVE_pval.csv")
 write.csv(data2, "/2/scratch/TylerA/SSD/bwamap/LVS_pval.csv") 
+
+# Same plotting code as done in the fst scripts
 
 ddat2<-data
 
@@ -559,7 +647,7 @@ LVS_pval_plot.png![LVS_pval_plot](https://user-images.githubusercontent.com/7750
 
 ## Creating a suspicious coverage .gff
 
-The high Fst found in male vs. female comparisons in the conflict_workflow highlights some areas that are most likely not true. So I created a file with those locations with a 10bp before and after window to remove from my genomes.
+A high Fst found in male vs. female control comparisons in the conflict_workflow highlights some areas that are most likely not true. So I created a file with those locations with an fst >0.1 in male vs. female comparisons in control populations with a 10bp before and after window to remove from my genomes.
 
 ````
 ################################# USING POOLFSTAT ###############################
@@ -666,11 +754,16 @@ write.table(test, file = "/2/scratch/TylerA/SSD/suspicious_coverage.gff", sep = 
             row.names = FALSE, quote = FALSE)
 ````
 
+I then use this suspicious_coverage.gff and repeat masker to mask these suspicious areas. This was done at the same stage of the original repeat masking and all steps afterwards were repeated with these suspicious areas removed.
+
+
+# Comparing areas with high Fst and statistically significant CMH values
+
 I want to pull out all spots in merged_AVE with an fst > 0.75 and then compare them to spots with a CMH padj < 0.01
 
 ````
 
-awk '$3 > 0.75  {print $1, $2, $3}' merged_AVE.fst > highfst_AVE.fst
+awk '$3 > 0.75  {print $1, $2, $3}' /2/scratch/TylerA/SSD/poolSNP/AVE.fst > highfst_AVE.fst
 
 awk -F "," '$5 < 0.01 {print $2, $3, $5}' CVE_pval.csv > highpval_CVE.csv
 
