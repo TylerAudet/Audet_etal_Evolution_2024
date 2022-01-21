@@ -763,11 +763,11 @@ I want to pull out all spots in merged_AVE with an fst > 0.75 and then compare t
 
 ````
 
-awk '$3 > 0.75  {print $1, $2, $3}' /2/scratch/TylerA/SSD/poolSNP/AVE.fst > highfst_AVE.fst
+awk '$3 > 0.75  {print $1, $2, $3}' /2/scratch/TylerA/SSD/poolSNP/AVE.fst > /2/scratch/TylerA/SSD/results/highfst_AVE.fst
 
-awk -F "," '$5 < 0.01 {print $2, $3, $5}' CVE_pval.csv > highpval_CVE.csv
+awk -F "," '$5 < 0.01 {print $2, $3, $5}' /2/scratch/TylerA/SSD/bwamap/CVE_pval.csv > /2/scratch/TylerA/SSD/results/highpval_CVE.csv
 
-sed "s/\"//g;s/,/\t/g" highpval_CVE.csv > highpval_CVE.cmh
+sed "s/\"//g;s/,/\t/g" /2/scratch/TylerA/SSD/results/highpval_CVE.csv > /2/scratch/TylerA/SSD/results/highpval_CVE.cmh
 
 ````
 
@@ -776,7 +776,7 @@ There are no matching SNPs between these two files. So I'm going to make a bed f
 ````
 rm(list=ls())
 
-data<-read.table("/2/scratch/TylerA/SSD/merged/highfst_AVE.fst")
+data<-read.table("/2/scratch/TylerA/SSD/results/highfst_AVE.fst")
 
 fst<-data
 
@@ -796,10 +796,10 @@ colnames(fst)<-headers
 
 
 
-write.table(fst,file="/2/scratch/TylerA/SSD/merged/highfst_AVE.bed",sep='\t',col.names=FALSE,row.names=FALSE,quote=FALSE)
+write.table(fst,file="/2/scratch/TylerA/SSD/results/highfst_AVE.bed",sep='\t',col.names=FALSE,row.names=FALSE,quote=FALSE)
 
 
-cmh<-read.table("/2/scratch/TylerA/SSD/merged/highpval_CVE.cmh")
+cmh<-read.table("/2/scratch/TylerA/SSD/results/highpval_CVE.cmh")
 
 
 cmh$V2<-as.numeric(cmh$V2)
@@ -817,9 +817,9 @@ cmh<-data.frame(cmh[c(1,4,5)])
 cmh$V1 <- sub("^", "chr", cmh$V1 )
 
 colnames(cmh)<-headers
-colnames(cmh)<-NA
 
-write.table(cmh,file="/2/scratch/TylerA/SSD/merged/highpval_CVE.bed",sep='\t',col.names=FALSE,row.names=FALSE,quote=FALSE)
+
+write.table(cmh,file="/2/scratch/TylerA/SSD/results/highpval_CVE.bed",sep='\t',col.names=FALSE,row.names=FALSE,quote=FALSE)
 
 
 ````
@@ -827,18 +827,18 @@ write.table(cmh,file="/2/scratch/TylerA/SSD/merged/highpval_CVE.bed",sep='\t',co
 Now I want to look for overlap in these bed files
 
 ````
-bedtools intersect -a highpval_CVE.bed -b highfst_AVE.bed > matches.bed
+bedtools intersect -a /2/scratch/TylerA/SSD/results/highpval_CVE.bed -b /2/scratch/TylerA/SSD/results/highfst_AVE.bed > /2/scratch/TylerA/SSD/results/matches.bed
 
 ````
 
 There are 462 overlapping regions
 
 ````
-bedtools intersect -a dmel-all-r6.23.gtf -b matches.bed
+bedtools intersect -a /2/scratch/TylerA/Dmelgenome/dmel-all-r6.23.gtf -b /2/scratch/TylerA/SSD/results/matches.bed
 
-sed 's/chr//g' matches.bed > matches-vcf.bed
+sed 's/chr//g' /2/scratch/TylerA/SSD/results/matches.bed > /2/scratch/TylerA/SSD/results/matches-vcf.bed
 
-vcftools --vcf merged_everything_noindel.vcf --bed matches-vcf.bed --out genes-of-interest --recode --keep-INFO-all
+vcftools --vcf /2/scratch/TylerA/SSD/poolSNP/merged_poolSNP.vcf --bed /2/scratch/TylerA/SSD/results/matches-vcf.bed --out /2/scratch/TylerA/SSD/results/genes-of-interest --recode --keep-INFO-all
 
 java -Xmx32g -jar /usr/local/gatk/GenomeAnalysisTK.jar -R /2/scratch/TylerA/Dmelgenome/gatk/dmel-all-chromosome-r6.23.fasta -V genes-of-interest.recode.vcf  -T VariantsToTable -F CHROM -F POS -F TYPE -F REF -F ALT -o interesting_loci.table
 
@@ -860,6 +860,157 @@ sed -i '1,6d' locations.table
 sed -i '1,6d' gene_ids.table
 ````
 This gives me 130 genes that have both an fst > 0.75 and a CMH padj < 0.01 with SNPs in a genic region.
+
+# Looking for selective sweeps with Tajima's D
+
+````
+
+awk '{print $1,$2,$3,$4,$5,$6}' Sexes_combined_norepeats_nosus.mpileup > C1.pileup
+awk '{print $1,$2,$3,$7,$8,$9}' Sexes_combined_norepeats_nosus.mpileup > C2.pileup
+awk '{print $1,$2,$3,$10,$11,$12}' Sexes_combined_norepeats_nosus.mpileup > E1.pileup
+awk '{print $1,$2,$3,$13,$14,$15}' Sexes_combined_norepeats_nosus.mpileup > E2.pileup
+
+awk '{print $1,$2,$3,$16,$17,$18}' Sexes_combined_norepeats_nosus.mpileup > L1.pileup
+awk '{print $1,$2,$3,$19,$20,$21}' Sexes_combined_norepeats_nosus.mpileup > L2.pileup
+awk '{print $1,$2,$3,$22,$23,$24}' Sexes_combined_norepeats_nosus.mpileup > S1.pileup
+awk '{print $1,$2,$3,$25,$26,$27}' Sexes_combined_norepeats_nosus.mpileup > S2.pileup
+
+
+python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E2 -n 400 -R 2L -a unknown -P 8 -p -k 0.001 --theta 0.005
+python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E2 -n 400 -R 2R -a unknown -P 8 -p -k 0.001 --theta 0.005
+python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E2 -n 400 -R 3L -a unknown -P 8 -p -k 0.001 --theta 0.005
+python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E2 -n 400 -R 3R -a unknown -P 8 -p -k 0.001 --theta 0.005
+python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E2 -n 300 -R X -a unknown -P 8 -p -k 0.001 --theta 0.005
+python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E2 -n 400 -R 4 -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E1 -n 400 -R 2L -a unknown -P 8 -p -k 0.001 --theta 0.005
+python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E1 -n 400 -R 2R -a unknown -P 8 -p -k 0.001 --theta 0.005
+python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E1 -n 400 -R 3L -a unknown -P 8 -p -k 0.001 --theta 0.005
+python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E1 -n 400 -R 3R -a unknown -P 8 -p -k 0.001 --theta 0.005
+python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E1 -n 300 -R X -a unknown -P 8 -p -k 0.001 --theta 0.005
+python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E1 -n 400 -R 4 -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+
+
+~~~~~
+
+sed 1d E1_2L.stat > E1_2L.txt
+sed 1d E1_2R.stat > E1_2R.txt
+sed 1d E1_3L.stat > E1_3L.txt
+sed 1d E1_3R.stat > E1_3R.txt
+sed 1d E1_4.stat > E1_4.txt
+sed 1d E1_X.stat > E1_X.txt
+
+sed 1d E2_2L.stat > E2_2L.txt
+sed 1d E2_2R.stat > E2_2R.txt
+sed 1d E2_3L.stat > E2_3L.txt
+sed 1d E2_3R.stat > E2_3R.txt
+sed 1d E2_4.stat > E2_4.txt
+sed 1d E2_X.stat > E2_X.txt
+
+
+
+####### To R #######
+
+E1_2L<-read.table("/2/scratch/TylerA/SSD/results/E1_2L.txt")
+E1_2R<-read.table("/2/scratch/TylerA/SSD/results/E1_2R.txt")
+E1_3L<-read.table("/2/scratch/TylerA/SSD/results/E1_3L.txt")
+E1_3R<-read.table("/2/scratch/TylerA/SSD/results/E1_3R.txt")
+E1_4<-read.table("/2/scratch/TylerA/SSD/results/E1_4.txt")
+E1_X<-read.table("/2/scratch/TylerA/SSD/results/E1_X.txt")
+
+
+
+headers<-c("chrom","chromStart","chromEnd")
+
+E1_2L$chrom<-c("chr2L")
+E1_2R$chrom<-c("chr2R")
+E1_3L$chrom<-c("chr3L")
+E1_3R$chrom<-c("chr3R")
+E1_4$chrom<-c("chr4")
+E1_X$chrom<-c("chrX")
+
+E1_2L <- subset(E1_2L, select=c(chrom,V1,V2))
+E1_2R <- subset(E1_2R, select=c(chrom,V1,V2))
+E1_3L <- subset(E1_3L, select=c(chrom,V1,V2))
+E1_3R <- subset(E1_3R, select=c(chrom,V1,V2))
+E1_4 <- subset(E1_4, select=c(chrom,V1,V2))
+E1_X <- subset(E1_X, select=c(chrom,V1,V2))
+
+
+colnames(E1_2L)<-headers
+colnames(E1_2R)<-headers
+colnames(E1_3L)<-headers
+colnames(E1_3R)<-headers
+colnames(E1_4)<-headers
+colnames(E1_X)<-headers
+
+E1<-rbind(E1_2L,E1_2R,E1_3L,E1_3R,E1_4,E1_X)
+
+write.table(E1,file="/2/scratch/TylerA/SSD/results/E1_sweep.bed",sep='\t',col.names=FALSE,row.names=FALSE,quote=FALSE)
+
+
+E2_2L<-read.table("/2/scratch/TylerA/SSD/results/E2_2L.txt")
+E2_2R<-read.table("/2/scratch/TylerA/SSD/results/E2_2R.txt")
+E2_3L<-read.table("/2/scratch/TylerA/SSD/results/E2_3L.txt")
+E2_3R<-read.table("/2/scratch/TylerA/SSD/results/E2_3R.txt")
+E2_4<-read.table("/2/scratch/TylerA/SSD/results/E2_4.txt")
+E2_X<-read.table("/2/scratch/TylerA/SSD/results/E2_X.txt")
+
+E2_2L$chrom<-c("chr2L")
+E2_2R$chrom<-c("chr2R")
+E2_3L$chrom<-c("chr3L")
+E2_3R$chrom<-c("chr3R")
+E2_4$chrom<-c("chr4")
+E2_X$chrom<-c("chrX")
+
+E2_2L <- subset(E2_2L, select=c(chrom,V1,V2))
+E2_2R <- subset(E2_2R, select=c(chrom,V1,V2))
+E2_3L <- subset(E2_3L, select=c(chrom,V1,V2))
+E2_3R <- subset(E2_3R, select=c(chrom,V1,V2))
+E2_4 <- subset(E2_4, select=c(chrom,V1,V2))
+E2_X <- subset(E2_X, select=c(chrom,V1,V2))
+
+
+colnames(E2_2L)<-headers
+colnames(E2_2R)<-headers
+colnames(E2_3L)<-headers
+colnames(E2_3R)<-headers
+colnames(E2_4)<-headers
+colnames(E2_X)<-headers
+
+E2<-rbind(E2_2L,E2_2R,E2_3L,E2_3R,E2_4,E2_X)
+
+write.table(E2,file="/2/scratch/TylerA/SSD/results/E2_sweep.bed",sep='\t',col.names=FALSE,row.names=FALSE,quote=FALSE)
+
+
+
+# Back to terminal
+
+bedtools intersect -a matches.bed -b E1_sweep.bed > matched_sweeps.bed
+bedtools intersect -a matched_sweeps.bed -b E2_sweep.bed > sweeps.bed
+
+
+
+
+
+
+pool-hmm code: python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E1 -n 6 -R 2L -a unknown -P 8 -p -k 0.001 --theta 0.005
+-n: number of chromosomes
+-R: region or chromosome to look at (need to do 1 at a time because of memory intensiveness)
+-a: site frequency spectrum, can be provided or calculated first if unknown
+-P: threads
+-p: tells it to actually give you results (predict selective sweeps)
+-k: per site transition probability between hidden states. Used the number listed in the example in the README.txt because they used Drosophila as the example data
+-theta: scaled mutation rate. used the example number for the same reason as -k
+
+
+
+
+````
+
+
+
 
 # Calculataing Tajima's D
 
