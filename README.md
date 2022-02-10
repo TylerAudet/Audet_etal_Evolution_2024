@@ -1015,76 +1015,224 @@ pool-hmm code: python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E1
 # Calculataing Tajima's D
 
 ````
-samtools mpileup -Q 20 -q 20 -d 450 \
--f /2/scratch/TylerA/Dmelgenome/gatk/dmel-all-chromosome-r6.23.fa \
-/2/scratch/TylerA/SSD/bwamap/E*.bam \
--o Experimental.mpileup
 
-perl /home/tylera/bin/popoolation_1.2.2/basic-pipeline/filter-pileup-by-gtf.pl --gtf /2/scratch/TylerA/Dmelgenome/dmel-all-chromosome-r6.23.fasta.out.gff --input ./Experimental.mpileup --output ./Experimental_norepeats.mpileup
+~~~
 
-perl /home/tylera/bin/popoolation_1.2.2/basic-pipeline/filter-pileup-by-gtf.pl --gtf /2/scratch/TylerA/SSD/suspicious_coverage.gff --input ./Experimental_norepeats.mpileup --output ./Experimental_clean.mpileup
-
-perl /home/tylera/bin/popoolation2_1201/indel_filtering/identify-indel-regions.pl --input ./Experimental_clean.mpileup --output ./Experimental_clean.gtf --indel-window 10
-
-perl /home/tylera/bin/popoolation_1.2.2/basic-pipeline/filter-pileup-by-gtf.pl --gtf ./Experimental_clean.gtf --input ./Experimental_clean.mpileup --output ./Experimental_clean_noindel.mpileup
+python /2/scratch/TylerA/SSD/scripts/VCF2sync.py \
+--vcf poolSNP_reps_2L.vcf \
+> 2L.sync
 
 
-awk '{print $1, $2, $3, $4, $5, $6}' Experimental_clean_noindel.pileup > E1?.pileup
-awk '{print $1, $2, $3, $7, $8, $9}' Experimental_clean_noindel.pileup > E2?.pileup
+python /2/scratch/TylerA/SSD/scripts/VCF2sync.py \
+--vcf poolSNP_reps_2R.vcf \
+> 2R.sync
 
-awk '$1 ~ "2L"' E1?.pileup > 2LE1.pileup
-awk '$1 ~ "2R"' E1?.pileup > 2RE1.pileup
-awk '$1 ~ "3L"' E1?.pileup > 3LE1.pileup
-awk '$1 ~ "3R"' E1?.pileup > 3RE1.pileup
-awk '$1 ~ "X"' E1?.pileup > XE1.pileup
-awk '$1 ~ "4"' E1?.pileup > 4E1.pileup
-cat 2LE1.pileup 2RE1.pileup 3LE1.pileup 3RE1.pileup XE1.pileup 4E1.pileup > E1?.pileup
+python /2/scratch/TylerA/SSD/scripts/VCF2sync.py \
+--vcf poolSNP_reps_3L.vcf \
+> 3L.sync
 
-awk '$1 ~ "2L"' E2?.pileup > 2LE2.pileup
-awk '$1 ~ "2R"' E2?.pileup > 2RE2.pileup
-awk '$1 ~ "3L"' E2?.pileup > 3LE2.pileup
-awk '$1 ~ "3R"' E2?.pileup > 3RE2.pileup
-awk '$1 ~ "X"' E2?.pileup > XE2.pileup
-awk '$1 ~ "4"' E2?.pileup > 4E2.pileup
-cat 2LE2.pileup 2RE2.pileup 3LE2.pileup 3RE2.pileup XE2.pileup 4E2.pileup > E2?.pileup
+python /2/scratch/TylerA/SSD/scripts/VCF2sync.py \
+--vcf poolSNP_reps_3R.vcf \
+> 3R.sync
+
+python /2/scratch/TylerA/SSD/scripts/VCF2sync.py \
+--vcf poolSNP_reps_4.vcf \
+> 4.sync
+
+python /2/scratch/TylerA/SSD/scripts/VCF2sync.py \
+--vcf poolSNP_reps_X.vcf \
+> X.sync
+
+#resample
+
+python /2/scratch/TylerA/SSD/scripts/SubsampleSync.py \
+--sync 2L.sync \
+--target-cov 300 \
+--min-cov 50 \
+> subsample_2L.sync
+
+python /2/scratch/TylerA/SSD/scripts/SubsampleSync.py \
+--sync 2R.sync \
+--target-cov 300 \
+--min-cov 50 \
+> subsample_2R.sync
+
+python /2/scratch/TylerA/SSD/scripts/SubsampleSync.py \
+--sync 3L.sync \
+--target-cov 300 \
+--min-cov 50 \
+> subsample_3L.sync
+
+python /2/scratch/TylerA/SSD/scripts/SubsampleSync.py \
+--sync 3R.sync \
+--target-cov 300 \
+--min-cov 50 \
+> subsample_3R.sync
+
+python /2/scratch/TylerA/SSD/scripts/SubsampleSync.py \
+--sync 4.sync \
+--target-cov 300 \
+--min-cov 50 \
+> subsample_4.sync
+
+python /2/scratch/TylerA/SSD/scripts/SubsampleSync.py \
+--sync X.sync \
+--target-cov 300 \
+--min-cov 50 \
+> subsample_X.sync
+
+#calculate true window size
+
+awk '{if ($1 == "2L") {print $0}}' /2/scratch/TylerA/SSD/bwamap/Sexes_combined_norepeat_nosus.gtf > ./2L_indels.gtf
+
+awk '{if ($1 == "2L") {print $0}}' /2/scratch/TylerA/Dmelgenome/dmel-all-chromosome-r6.23.fasta.out.gff > ./2L_transposons.gtf
 
 
-#Coverage filter on popoolation doesn't work
-#perl /home/tylera/bin/popoolation_1.2.2/basic-pipeline/subsample-pileup.pl --input ./E1?.pileup --output ./E1?_coverage300.pileup \
-#--target-coverage 250 --max-coverage 400 --method withreplace --fastq-type illumina
-
-#perl /home/tylera/bin/popoolation_1.2.2/basic-pipeline/subsample-pileup.pl --input ./E2?.pileup --output ./E2?_coverage300.pileup \
-#--target-coverage 250 --max-coverage 400 --method withreplace --fastq-type illumina
 
 
-awk '{if ($4 > 250 && $4 < 400) {print $1, $2, $3, $4, $5, $6}}' E1\?.pileup > E1_coverage250.pileup
-awk '{if ($4 > 250 && $4 < 400) {print $1, $2, $3, $4, $5, $6}}' E2\?.pileup > E2_coverage250.pileup
+python /2/scratch/TylerA/SSD/scripts/TrueWindows.py \
+--badcov poolSNP_reps_2L_BS.txt \
+--window 10000 \
+--step 10000 \
+--chromosomes 2L:23513712 \
+--output truewindows_2L
 
-perl /home/tylera/bin/popoolation_1.2.2/Variance-sliding.pl \
---measure D --input ./E1_coverage250.pileup --output ./E1?_coverage300.d \
---pool-size 100 --min-count 2 --min-coverage 25 --window-size 1000 \
---step-size 1000
+python /2/scratch/TylerA/SSD/scripts/TrueWindows.py \
+--badcov poolSNP_reps_2R_BS.txt \
+--window 10000 \
+--step 10000 \
+--chromosomes 2R:25286936 \
+--output truewindows_2R
 
-perl /home/tylera/bin/popoolation_1.2.2/Variance-sliding.pl \
---measure D --input ./E2_coverage250.pileup --output ./E2?_coverage300.d \
---pool-size 100 --min-count 2 --min-coverage 25 --window-size 1000 \
---step-size 1000
+
+python /2/scratch/TylerA/SSD/scripts/TrueWindows.py \
+--badcov poolSNP_reps_3L_BS.txt \
+--window 10000 \
+--step 10000 \
+--chromosomes 3L:28110227 \
+--output truewindows_3L
+
+
+python /2/scratch/TylerA/SSD/scripts/TrueWindows.py \
+--badcov poolSNP_reps_3R_BS.txt \
+--window 10000 \
+--step 10000 \
+--chromosomes 3R:32079331 \
+--output truewindows_3R
+
+python /2/scratch/TylerA/SSD/scripts/TrueWindows.py \
+--badcov poolSNP_reps_4_BS.txt \
+--window 10000 \
+--step 10000 \
+--chromosomes 4:1348131 \
+--output truewindows_4
+
+
+python /2/scratch/TylerA/SSD/scripts/TrueWindows.py \
+--badcov poolSNP_reps_X_BS.txt \
+--window 10000 \
+--step 10000 \
+--chromosomes X:23542271 \
+--output truewindows_X
+
+
+# Calculate pop parameters
+
+python /2/scratch/TylerA/SSD/scripts/PoolGen_var.py \
+--input subsample_2L.sync \
+--pool-size 200,200,200,200,200,200,200,200 \
+--min-count 2 \
+--window 10000 \
+--step 10000 \
+--sitecount truewindows_2L-10000-10000.txt \
+--min-sites-frac 0.75 \
+--output 2L_D
+
+python /2/scratch/TylerA/SSD/scripts/PoolGen_var.py \
+--input subsample_2R.sync \
+--pool-size 200,200,200,200,200,200,200,200 \
+--min-count 2 \
+--window 10000 \
+--step 10000 \
+--sitecount truewindows_2R-10000-10000.txt \
+--min-sites-frac 0.75 \
+--output 2R_D
+
+python /2/scratch/TylerA/SSD/scripts/PoolGen_var.py \
+--input subsample_3L.sync \
+--pool-size 200,200,200,200,200,200,200,200 \
+--min-count 2 \
+--window 10000 \
+--step 10000 \
+--sitecount truewindows_3L-10000-10000.txt \
+--min-sites-frac 0.75 \
+--output 3L_D
+
+python /2/scratch/TylerA/SSD/scripts/PoolGen_var.py \
+--input subsample_3R.sync \
+--pool-size 200,200,200,200,200,200,200,200 \
+--min-count 2 \
+--window 10000 \
+--step 10000 \
+--sitecount truewindows_3R-10000-10000.txt \
+--min-sites-frac 0.75 \
+--output 3R_D
+
+python /2/scratch/TylerA/SSD/scripts/PoolGen_var.py \
+--input subsample_4.sync \
+--pool-size 200,200,200,200,200,200,200,200 \
+--min-count 2 \
+--window 10000 \
+--step 10000 \
+--sitecount truewindows_4-10000-10000.txt \
+--min-sites-frac 0.75 \
+--output 4_D
+
+python /2/scratch/TylerA/SSD/scripts/PoolGen_var.py \
+--input subsample_X.sync \
+--pool-size 200,200,200,200,200,200,200,200 \
+--min-count 2 \
+--window 10000 \
+--step 10000 \
+--sitecount truewindows_X-10000-10000.txt \
+--min-sites-frac 0.75 \
+--output X_D
+
+
+~~~~
+
+
+cat 2L_D_10000_10000.D 2R_D_10000_10000.D 3L_D_10000_10000.D 3R_D_10000_10000.D 4_D_10000_10000.D X_D_10000_10000.D > all.D
+
+cat 2L_D_10000_10000.pi 2R_D_10000_10000.pi 3L_D_10000_10000.pi 3R_D_10000_10000.pi 4_D_10000_10000.pi X_D_10000_10000.pi > all.pi
+
+~~~
 ````
 
-Now graphing in R
+Now graphing in R and extracting interesting outliers (top and bottom 1%)
 
 ````
+rm(list=ls())
+
+library(dplyr)
 library(ggplot2)
 
-data<-read.table("/2/scratch/TylerA/SSD/bwamap/E1?_coverage300.d")
-ddat2<-data
-headers<-c("chr","pos","SNP","cov","D")
+
+D<-read.table("~/Desktop/all.D")
+pi<-read.table("~/Desktop/all.pi")
+
+
+ddat2<-D
+
+headers<-c("chr","pos","C1","C2","E1","E2","L1","L2","S1","S2")
+
+colnames(ddat2)<-headers
 
 # Convert na in column D to 0
 
 ddat2 <- data.frame(lapply(ddat2, function(x) {
-                 gsub("na", "0", x)
-             }))
+  gsub("na", "0", x)
+}))
 
 ddat22L <- ddat2[which(ddat2$chr=='2L'),]
 ddat22R <- ddat2[which(ddat2$chr=='2R'),]
@@ -1109,23 +1257,208 @@ ddat2$number <-  c((1:l),
                    (l+g+h+i+1):(l+g+h+i+j),
                    (l+g+h+i+j+1):(l+g+h+i+j+k))
 
+ddat2$E1<-as.numeric(ddat2$E1)
+ddat2$E2<-as.numeric(ddat2$E2)
+ddat2$C1<-as.numeric(ddat2$C1)
+ddat2$C2<-as.numeric(ddat2$C2)
+ddat2$L1<-as.numeric(ddat2$L1)
+ddat2$L2<-as.numeric(ddat2$L2)
+ddat2$S1<-as.numeric(ddat2$S1)
+ddat2$S2<-as.numeric(ddat2$S2)
 
-plot<-ggplot(ddat2, aes(x=number, y=D, color=chr)) +
+
+#filter(ddat2, chr == "2L") %>%
+
+  ggplot(ddat2, aes(x=number,y=E1)) +
+  geom_point(size=0.5, show.legend = F, alpha=0.25) +
+  facet_grid(vars(chr)) +
+  theme(panel.background = element_blank()) +
+  geom_smooth(aes(y=E1), method="auto", col="blue")
+
+filter(ddat2, chr == "2R") %>%
+  ggplot(aes(x=number,y=E1)) +
   geom_point(size=0.5, show.legend = F, alpha=0.25) +
   theme(panel.background = element_blank()) +
+  geom_smooth(aes(y=E1), method="auto", col="blue")
+
+filter(ddat2, chr == "3L") %>%
+  ggplot(aes(x=number,y=E1)) +
+  geom_point(size=0.5, show.legend = F, alpha=0.25) +
+  theme(panel.background = element_blank()) +
+  geom_smooth(aes(y=E1), method="auto", col="blue")
+
+filter(ddat2, chr == "3R") %>%
+  ggplot(aes(x=number,y=E1)) +
+  geom_point(size=0.5, show.legend = F, alpha=0.25) +
+  theme(panel.background = element_blank()) +
+  geom_smooth(aes(y=E1), method="auto", col="blue")
+
+
+
+
+
+plot_E2<-ggplot(ddat2,aes(x=number,y=E2,color=chr)) +
+  geom_point(size=0.5, show.legend = F, alpha=0.25) +
   scale_colour_manual(values=c("seagreen", "darkslateblue", 'darkred', 'darkorchid4', 'darkolivegreen', 'darkblue')) +
-  theme(text = element_text(size=20),
-        axis.text.x= element_text(size=15), 
-        axis.text.y= element_text(size=15))
-        
-        
-png("/2/scratch/TylerA/SSD/bwamap/E1_D.png",type="cairo")
-plot
-dev.off()
+  theme(panel.background = element_blank()) +
+  geom_smooth(aes(y=E2), method="auto", col="blue")
+
+plot_C1<-ggplot(ddat2,aes(x=number,y=C1,color=chr)) +
+  geom_point(size=0.5, show.legend = F, alpha=0.25) +
+  theme(panel.background = element_blank()) +
+  geom_smooth(aes(y=C1), method="auto", col="blue")
+
+plot_C2<-ggplot(ddat2,aes(x=number,y=C2,color=chr)) +
+  geom_point(size=0.5, show.legend = F, alpha=0.25) +
+  theme(panel.background = element_blank()) +
+  geom_smooth(aes(y=C2), method="auto", col="blue")
+
+plot_L1<-ggplot(ddat2,aes(x=number,y=L1,color=chr)) +
+  geom_point(size=0.5, show.legend = F, alpha=0.25) +
+  theme(panel.background = element_blank()) +
+  geom_smooth(aes(y=L1), method="auto", col="blue")
+
+plot_L2<-ggplot(ddat2,aes(x=number,y=L2,color=chr)) +
+  geom_point(size=0.5, show.legend = F, alpha=0.25) +
+  theme(panel.background = element_blank()) +
+  geom_smooth(aes(y=L2), method="auto", col="blue")
+
+plot_S1<-ggplot(ddat2,aes(x=number,y=S1,color=chr)) +
+  geom_point(size=0.5, show.legend = F, alpha=0.25) +
+  theme(panel.background = element_blank()) +
+  geom_smooth(aes(y=S1), method="auto", col="blue")
+
+plot_S2<-ggplot(ddat2,aes(x=number,y=S2,color=chr)) +
+  geom_point(size=0.5, show.legend = F, alpha=0.25) +
+  theme(panel.background = element_blank()) +
+  geom_smooth(aes(y=S2), method="auto", col="blue")
+
+##
 
 
-# These plots are incoherent
-![E1_D](https://user-images.githubusercontent.com/77504755/140098637-d1df5113-c267-4afc-8bed-9b76d15dc007.png)
+with(ddat2, tapply(E1, chr,
+                   quantile, probs = c(0, 0.001, 0.01, 0.1, 0.5, 0.9, 0.99, 0.999, 1),
+                   na.rm = TRUE))
+
+# 1% for E1
+#2l: -2.589, 5.147
+#2R: -2.419, 5.021
+#3L: -2.724, 4.723
+#3R: -2.266, 4.96
+#4: -1.93, 1.307
+#X: -2.135, 4.016
+
+
+with(ddat2, tapply(E2, chr,
+                   quantile, probs = c(0, 0.001, 0.01, 0.1, 0.5, 0.9, 0.99, 0.999, 1),
+                   na.rm = TRUE))
+
+# 1 for E2
+#2L: -2.68, 5.12
+#2R: -2.525, 4.91 
+#3L: -2.45, 5.03
+#3R: -2.46, 4.98
+#4: -1.86, 0.76
+#X: -2.46, 4.31
+
+
+### Make bed files for D
+
+library(dplyr)
+
+
+E1_D <- data.frame(D[c(1,2,5)])
+E2_D <- data.frame(D[c(1,2,6)])
+
+E1_D$V1 <- sub("^", "chr", E1_D$V1)
+E2_D$V1 <- sub("^", "chr", E2_D$V1)
+
+E1_D$V2<-as.numeric(E1_D$V2)
+E2_D$V2<-as.numeric(E2_D$V2)
+
+E1_D$start<-E1_D$V2-10000
+E1_D$end<-E1_D$V2+10000
+
+E2_D$start<-E2_D$V2-10000
+E2_D$end<-E2_D$V2+10000
+
+E1_D_2L <- filter(E1_D, V1 == "chr2L") %>%
+  filter(V5 <= -2.589 | V5 >=  5.147)
+
+E1_D_2R <- filter(E1_D, V1 == "chr2R") %>%
+  filter(V5 <= -2.419 | V5 >=  5.021)
+
+E1_D_3L <- filter(E1_D, V1 == "chr3L") %>%
+  filter(V5 <= -2.724 | V5 >=  4.723)
+
+E1_D_3R <- filter(E1_D, V1 == "chr3R") %>%
+  filter(V5 <= -2.266 | V5 >=  4.96)
+
+E1_D_4 <- filter(E1_D, V1 == "chr4") %>%
+  filter(V5 <= -1.93 | V5 >=  1.307)
+
+E1_D_X <- filter(E1_D, V1 == "chrX") %>%
+  filter(V5 <= -2.135 | V5 >=  4.016)
+
+# 1% for E1
+#2l: -2.589, 5.147
+#2R: -2.419, 5.021
+#3L: -2.724, 4.723
+#3R: -2.266, 4.96
+#4: -1.93, 1.307
+#X: -2.135, 4.016
+
+E2_D_2L <- filter(E2_D, V1 == "chr2L") %>%
+  filter(V6 <= -2.68 | V6 >= 5.12)
+
+E2_D_2R <- filter(E2_D, V1 == "chr2R") %>%
+  filter(V6 <= -2.53 | V6 >= 4.91)
+
+E2_D_3L <- filter(E2_D, V1 == "chr3L") %>%
+  filter(V6 <= -2.45 | V6 >= 5.03)
+
+E2_D_3R <- filter(E2_D, V1 == "chr3R") %>%
+  filter(V6 <= -2.46 | V6 >= 4.98)
+
+E2_D_4 <- filter(E2_D, V1 == "chr4") %>%
+  filter(V6 <= -1.86 | V6 >= 0.76)
+
+E2_D_X <- filter(E2_D, V1 == "chrX") %>%
+  filter(V6 <= -2.46 | V6 >= 4.31)
+
+# 1 for E2
+#2L: -2.68, 5.12
+#2R: -2.525, 4.91 
+#3L: -2.45, 5.03
+#3R: -2.46, 4.98
+#4: -1.86, 0.76
+#X: -2.46, 4.31
+
+E1_D_2L <- E1_D_2L[,c(1,4,5)]
+E1_D_2R <- E1_D_2R[,c(1,4,5)]
+E1_D_3L <- E1_D_3L[,c(1,4,5)]
+E1_D_3R <- E1_D_3R[,c(1,4,5)]
+E1_D_4 <- E1_D_4[,c(1,4,5)]
+E1_D_X <- E1_D_X[,c(1,4,5)]
+
+E2_D_2L <- E2_D_2L[,c(1,4,5)]
+E2_D_2R <- E2_D_2R[,c(1,4,5)]
+E2_D_3L <- E2_D_3L[,c(1,4,5)]
+E2_D_3R <- E2_D_3R[,c(1,4,5)]
+E2_D_4 <- E2_D_4[,c(1,4,5)]
+E2_D_X <- E2_D_X[,c(1,4,5)]
+
+E1_D_final <- rbind(E1_D_2L, E1_D_2R, E1_D_3L, E1_D_3R, E1_D_4, E1_D_X)
+E2_D_final <- rbind(E2_D_2L, E2_D_2R, E2_D_3L, E2_D_3R, E2_D_4, E2_D_X)
+
+
+headers<-c("chrom","chromStart","chromEnd")
+colnames(E1_D_final)<-headers
+colnames(E2_D_final)<-headers
+
+write.table(E1_D_final,file="~/Desktop/E1_D.bed",sep='\t',col.names=FALSE,row.names=FALSE,quote=FALSE)
+write.table(E2_D_final,file="~/Desktop/E2_D.bed",sep='\t',col.names=FALSE,row.names=FALSE,quote=FALSE)
+
 ````
 
 
