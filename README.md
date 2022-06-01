@@ -58,9 +58,19 @@ samtools mpileup -Q 20 -q 20 -d 900 \
 ## Remove repeat regions
 
 ````
-perl /home/tylera/bin/popoolation_1.2.2/basic-pipeline/filter-pileup-by-gtf.pl --gtf /2/scratch/TylerA/Dmelgenome/dmel-all-chromosome-r6.23.fasta.out.gff --input ./Sexes_combined.mpileup --output ./Sexes_combined_norepeats.mpileup
 
-/usr/local/RepeatMasker/RepeatMasker -pa 10 -species drosophila -gff dmel-all-chromosome-r6.23.fasta
+curl -O http://ftp.flybase.net/genomes/Drosophila_melanogaster/dmel_r6.23_FB2018_04/fasta/dmel-all-transposon-r6.23.fasta.gz
+### placed with reference
+
+/usr/local/RepeatMasker/RepeatMasker \
+-pa 20 \
+--lib /2/scratch/TylerA/Dmelgenome/dmel-all-transposon-r6.23.fasta \
+--gff \
+/2/scratch/TylerA/Dmelgenome/dmel-all-chromosome-r6.23.fasta	
+
+#perl /home/tylera/bin/popoolation_1.2.2/basic-pipeline/filter-pileup-by-gtf.pl --gtf /2/scratch/TylerA/Dmelgenome/dmel-all-chromosome-#r6.23.fasta.out.gff --input ./Sexes_combined.mpileup --output ./Sexes_combined_norepeats.mpileup
+
+#/usr/local/RepeatMasker/RepeatMasker -pa 10 -species drosophila -gff dmel-all-chromosome-r6.23.fasta
 
 
 # Remove suspicious areas
@@ -1016,6 +1026,7 @@ pool-hmm code: python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E1
 
 ````
 
+
 ~~~
 
 python /2/scratch/TylerA/SSD/scripts/VCF2sync.py \
@@ -1083,9 +1094,9 @@ python /2/scratch/TylerA/SSD/scripts/SubsampleSync.py \
 
 #calculate true window size
 
-awk '{if ($1 == "2L") {print $0}}' /2/scratch/TylerA/SSD/bwamap/Sexes_combined_norepeat_nosus.gtf > ./2L_indels.gtf
+#awk '{if ($1 == "2L") {print $0}}' /2/scratch/TylerA/SSD/bwamap/Sexes_combined_norepeat_nosus.gtf > ./2L_indels.gtf
 
-awk '{if ($1 == "2L") {print $0}}' /2/scratch/TylerA/Dmelgenome/dmel-all-chromosome-r6.23.fasta.out.gff > ./2L_transposons.gtf
+#awk '{if ($1 == "2L") {print $0}}' /2/scratch/TylerA/Dmelgenome/dmel-all-chromosome-r6.23.fasta.out.gff > ./2L_transposons.gtf
 
 
 
@@ -1139,14 +1150,14 @@ python /2/scratch/TylerA/SSD/scripts/TrueWindows.py \
 # Calculate pop parameters
 
 python /2/scratch/TylerA/SSD/scripts/PoolGen_var.py \
---input subsample_2L.sync \
+--input 200_subsample_2L.sync \
 --pool-size 200,200,200,200,200,200,200,200 \
 --min-count 2 \
 --window 10000 \
 --step 10000 \
 --sitecount truewindows_2L-10000-10000.txt \
 --min-sites-frac 0.75 \
---output 2L_D
+--output 200_2L_D
 
 python /2/scratch/TylerA/SSD/scripts/PoolGen_var.py \
 --input subsample_2R.sync \
@@ -1197,7 +1208,6 @@ python /2/scratch/TylerA/SSD/scripts/PoolGen_var.py \
 --sitecount truewindows_X-10000-10000.txt \
 --min-sites-frac 0.75 \
 --output X_D
-
 
 ~~~~
 
@@ -1462,7 +1472,173 @@ write.table(E2_D_final,file="~/Desktop/E2_D.bed",sep='\t',col.names=FALSE,row.na
 ````
 
 
-# extracting areas of interest that have a high Tajima's D
+# Running pool-hmm to find homologous areas
+
+
+
+
+awk '{print $1,$2,$3,$4,$5,$6}' Sexes_combined_norepeats_nosus.mpileup > C1.pileup
+awk '{print $1,$2,$3,$7,$8,$9}' Sexes_combined_norepeats_nosus.mpileup > C2.pileup
+awk '{print $1,$2,$3,$10,$11,$12}' Sexes_combined_norepeats_nosus.mpileup > E1.pileup
+awk '{print $1,$2,$3,$13,$14,$15}' Sexes_combined_norepeats_nosus.mpileup > E2.pileup
+
+awk '{print $1,$2,$3,$16,$17,$18}' Sexes_combined_norepeats_nosus.mpileup > L1.pileup
+awk '{print $1,$2,$3,$19,$20,$21}' Sexes_combined_norepeats_nosus.mpileup > L2.pileup
+awk '{print $1,$2,$3,$22,$23,$24}' Sexes_combined_norepeats_nosus.mpileup > S1.pileup
+awk '{print $1,$2,$3,$25,$26,$27}' Sexes_combined_norepeats_nosus.mpileup > S2.pileup
+
+
+
+
+
+
+python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E2 -n 400 -R 2L -a unknown -P 8 -p -k 0.001 --theta 0.005
+python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E2 -n 400 -R 2R -a unknown -P 8 -p -k 0.001 --theta 0.005
+python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E2 -n 400 -R 3L -a unknown -P 8 -p -k 0.001 --theta 0.005
+python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E2 -n 400 -R 3R -a unknown -P 8 -p -k 0.001 --theta 0.005
+python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E2 -n 300 -R X -a unknown -P 8 -p -k 0.001 --theta 0.005
+python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E2 -n 400 -R 4 -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E1 -n 400 -R 2L -a unknown -P 8 -p -k 0.001 --theta 0.005
+python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E1 -n 400 -R 2R -a unknown -P 8 -p -k 0.001 --theta 0.005
+python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E1 -n 400 -R 3L -a unknown -P 8 -p -k 0.001 --theta 0.005
+python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E1 -n 400 -R 3R -a unknown -P 8 -p -k 0.001 --theta 0.005
+python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E1 -n 300 -R X -a unknown -P 8 -p -k 0.001 --theta 0.005
+python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E1 -n 400 -R 4 -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+
+
+python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/C2 -n 400 -R 2L -a unknown -P 8 -p -k 0.001 --theta 0.005
+python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/C2 -n 400 -R 2R -a unknown -P 8 -p -k 0.001 --theta 0.005
+python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/C2 -n 400 -R 3L -a unknown -P 8 -p -k 0.001 --theta 0.005
+python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/C2 -n 400 -R 3R -a unknown -P 8 -p -k 0.001 --theta 0.005
+python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/C2 -n 300 -R X -a unknown -P 8 -p -k 0.001 --theta 0.005
+python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/C2 -n 400 -R 4 -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/C1 -n 400 -R 2L -a unknown -P 8 -p -k 0.001 --theta 0.005
+python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/C1 -n 400 -R 2R -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+~~~~~~
+python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/C1 -n 400 -R 3L -a unknown -P 8 -p -k 0.001 --theta 0.005
+python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/C1 -n 400 -R 3R -a unknown -P 8 -p -k 0.001 --theta 0.005
+python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/C1 -n 300 -R X -a unknown -P 8 -p -k 0.001 --theta 0.005
+python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/C1 -n 400 -R 4 -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+
+~~~~~
+
+sed 1d E1_2L.stat > E1_2L.txt
+sed 1d E1_2R.stat > E1_2R.txt
+sed 1d E1_3L.stat > E1_3L.txt
+sed 1d E1_3R.stat > E1_3R.txt
+sed 1d E1_4.stat > E1_4.txt
+sed 1d E1_X.stat > E1_X.txt
+
+sed 1d E2_2L.stat > E2_2L.txt
+sed 1d E2_2R.stat > E2_2R.txt
+sed 1d E2_3L.stat > E2_3L.txt
+sed 1d E2_3R.stat > E2_3R.txt
+sed 1d E2_4.stat > E2_4.txt
+sed 1d E2_X.stat > E2_X.txt
+
+
+
+####### To R #######
+
+E1_2L<-read.table("/2/scratch/TylerA/SSD/results/E1_2L.txt")
+E1_2R<-read.table("/2/scratch/TylerA/SSD/results/E1_2R.txt")
+E1_3L<-read.table("/2/scratch/TylerA/SSD/results/E1_3L.txt")
+E1_3R<-read.table("/2/scratch/TylerA/SSD/results/E1_3R.txt")
+E1_4<-read.table("/2/scratch/TylerA/SSD/results/E1_4.txt")
+E1_X<-read.table("/2/scratch/TylerA/SSD/results/E1_X.txt")
+
+
+
+headers<-c("chrom","chromStart","chromEnd")
+
+E1_2L$chrom<-c("chr2L")
+E1_2R$chrom<-c("chr2R")
+E1_3L$chrom<-c("chr3L")
+E1_3R$chrom<-c("chr3R")
+E1_4$chrom<-c("chr4")
+E1_X$chrom<-c("chrX")
+
+E1_2L <- subset(E1_2L, select=c(chrom,V1,V2))
+E1_2R <- subset(E1_2R, select=c(chrom,V1,V2))
+E1_3L <- subset(E1_3L, select=c(chrom,V1,V2))
+E1_3R <- subset(E1_3R, select=c(chrom,V1,V2))
+E1_4 <- subset(E1_4, select=c(chrom,V1,V2))
+E1_X <- subset(E1_X, select=c(chrom,V1,V2))
+
+
+colnames(E1_2L)<-headers
+colnames(E1_2R)<-headers
+colnames(E1_3L)<-headers
+colnames(E1_3R)<-headers
+colnames(E1_4)<-headers
+colnames(E1_X)<-headers
+
+E1<-rbind(E1_2L,E1_2R,E1_3L,E1_3R,E1_4,E1_X)
+
+write.table(E1,file="/2/scratch/TylerA/SSD/results/E1_sweep.bed",sep='\t',col.names=FALSE,row.names=FALSE,quote=FALSE)
+
+
+E2_2L<-read.table("/2/scratch/TylerA/SSD/results/E2_2L.txt")
+E2_2R<-read.table("/2/scratch/TylerA/SSD/results/E2_2R.txt")
+E2_3L<-read.table("/2/scratch/TylerA/SSD/results/E2_3L.txt")
+E2_3R<-read.table("/2/scratch/TylerA/SSD/results/E2_3R.txt")
+E2_4<-read.table("/2/scratch/TylerA/SSD/results/E2_4.txt")
+E2_X<-read.table("/2/scratch/TylerA/SSD/results/E2_X.txt")
+
+E2_2L$chrom<-c("chr2L")
+E2_2R$chrom<-c("chr2R")
+E2_3L$chrom<-c("chr3L")
+E2_3R$chrom<-c("chr3R")
+E2_4$chrom<-c("chr4")
+E2_X$chrom<-c("chrX")
+
+E2_2L <- subset(E2_2L, select=c(chrom,V1,V2))
+E2_2R <- subset(E2_2R, select=c(chrom,V1,V2))
+E2_3L <- subset(E2_3L, select=c(chrom,V1,V2))
+E2_3R <- subset(E2_3R, select=c(chrom,V1,V2))
+E2_4 <- subset(E2_4, select=c(chrom,V1,V2))
+E2_X <- subset(E2_X, select=c(chrom,V1,V2))
+
+
+colnames(E2_2L)<-headers
+colnames(E2_2R)<-headers
+colnames(E2_3L)<-headers
+colnames(E2_3R)<-headers
+colnames(E2_4)<-headers
+colnames(E2_X)<-headers
+
+E2<-rbind(E2_2L,E2_2R,E2_3L,E2_3R,E2_4,E2_X)
+
+write.table(E2,file="/2/scratch/TylerA/SSD/results/E2_sweep.bed",sep='\t',col.names=FALSE,row.names=FALSE,quote=FALSE)
+
+
+
+
+
+bedtools intersect -a matches.bed -b E1_sweep.bed > matched_sweeps.bed
+bedtools intersect -a matched_sweeps.bed -b E2_sweep.bed > sweeps.bed
+
+
+
+
+
+
+pool-hmm code: python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E1 -n 6 -R 2L -a unknown -P 8 -p -k 0.001 --theta 0.005
+-n: number of chromosomes
+-R: region or chromosome to look at (need to do 1 at a time because of memory intensiveness)
+-a: site frequency spectrum, can be provided or calculated first if unknown
+-P: threads
+-p: tells it to actually give you results (predict selective sweeps)
+-k: per site transition probability between hidden states. Used the number listed in the example in the README.txt because they used Drosophila as the example data
+-theta: scaled mutation rate. used the example number for the same reason as -k
+
+
+
 
 
 
