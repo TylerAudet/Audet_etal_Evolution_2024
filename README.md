@@ -1,35 +1,40 @@
-# scripts
 
-## run fastqc
-QC.sh
+# 1) Trimming was done with bbduk (bbmap v. 38.86)
 
-## Trim
-bbtrim.sh
+bbduk.sh \
+in1=R1.fastq \
+in2=R2.fastq \
+out1=R1_trimmed.fastq \
+out2=R2_trimmed.fastq \
+ref=AllAdapters.fa \
+threads=32 ftr=149 ktrim=r k=23 mink=7 hdist=1 tpe tbo \
+qtrim=rl trimq=20 minlength=36
 
-## QC
-QC_after_trim.sh
+# 2) Genome was mapped using bwa-mem v. 0.7.17 to Drosophila reference genome 6.23
 
-## Index genome for bwa
+bwa mem -t 32 \
+-M ref.fa \
+R1_trimmed.fastq \
+R2_trimmed.fastq \
+> mapped.sam
 
-bwa index dmel-all-chromosome-r6.23.fasta.gz
+# 3) Sam files were converted to bam files using Samtools v. 1.12
 
-## Map genomes
+samtools view -b -@32 mapped.sam | \
+samtools sort mapped.bam | \
+samtools view -b -q 20 -@ 32 -o mapped.bam
 
-bwa_map.sh
+# 4) Supplimentary reads from an additional run of sexuencing were merged together with samtoold v. 1.12
 
-## Sam files converted to bam
+This was done by first seperating each run of sequencing in to two directories called run1 and run2, and finally merging these directories in to a final directory called merged. This method was used to merge suppletary runs of sequencing together as well as to merge sexes for analyses where sexes are pooled together.
 
-sam2bam.sh
+samtools merge merged.bam \
+run1/*.bam \
+run2/*.bam
 
-## merging first reads with supplimentary reads and then merging sexes
-### This requires `mv` to put matching samples in run1 and run2 respectively. The names also must match.
-### So to merge E1F and E1M `mv E1F.bam run1/E1.bam` and `mv E1M.bam run2/E1.bam` and then run the merge script.
+5) Mark and then remoe read groups using Samtools v. 1.12
 
-merge.sh
 
-## Filter for quality over 20
-
-Q20.sh
 
 ## Add read-groups because they are necessary for future programs
 
