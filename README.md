@@ -26,19 +26,23 @@ samtools view -b -q 20 -@ 32 -o mapped.bam
 
 # 4) Supplimentary reads from an additional run of sexuencing were merged together with samtoold v. 1.12
 
-This was done by first seperating each run of sequencing in to two directories called run1 and run2, and finally merging these directories in to a final directory called merged. This method was used to merge suppletary runs of sequencing together as well as to merge sexes for analyses where sexes are pooled together.
+## This was done by first seperating each run of sequencing in to two directories called run1 and run2, and finally merging these directories in to a final directory called merged. This method was used to merge suppletary runs of sequencing together as well as to merge sexes for analyses where sexes are pooled together.
 
 samtools merge merged.bam \
 run1/*.bam \
 run2/*.bam
 
-5) Mark and then remoe read groups using Samtools v. 1.12
+# 5) Mark and then remove read groups using Samtools v. 1.12
 
+## Done in four stages. Files are first sorted by name, then fixmate is used to add quality tags to reads. Then files are sorted by coordinate and mardup is used to mark the duplicates with the -r flags to remove those duplicate reads.
 
+samtools sort -n -@ 32 -o out.bam in.bam
 
-## Add read-groups because they are necessary for future programs
+samtools fixmate -m -u -@ 32 in.bam out.bam
 
-addrg.sh
+samtools sort -@ 32 -o out.bam in.bam
+
+samtools markdup -l 150 -r -s -f stats.txt -d 2500 -@ 32 in.bam out.bam
 
 ## Create an mpileup
 ### Setting max coverage to 450 to avoid the super high coverage areas causing issues with memory and time
