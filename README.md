@@ -34,7 +34,7 @@ run2/*.bam
 
 # 5) Mark and then remove read groups using Samtools v. 1.12
 
-## Done in four stages. Files are first sorted by name, then fixmate is used to add quality tags to reads. Then files are sorted by coordinate and mardup is used to mark the duplicates with the -r flags to remove those duplicate reads.
+### Done in four stages. Files are first sorted by name, then fixmate is used to add quality tags to reads. Then files are sorted by coordinate and mardup is used to mark the duplicates with the -r flags to remove those duplicate reads.
 
 samtools sort -n -@ 32 -o out.bam in.bam
 
@@ -44,42 +44,43 @@ samtools sort -@ 32 -o out.bam in.bam
 
 samtools markdup -l 150 -r -s -f stats.txt -d 2500 -@ 32 in.bam out.bam
 
-## Create an mpileup
-### Setting max coverage to 450 to avoid the super high coverage areas causing issues with memory and time
-### Maximum coverage of 450 because average coverage should be 400 (males + females at 200 each)
-### also swtching back to using info because sharcnet is too time consuming
+## 6) Samtools v. 1.12 was used to create an mpileup with sequence and SNP quality thresholds set to 20 and maximum depth set to 1.5x expected depth to remove suspiciously high coverage areas.
 
-````
-samtools mpileup -Q 20 -q 20 -d 450 \
--f /2/scratch/TylerA/Dmelgenome/gatk/dmel-all-chromosome-r6.23.fa \
-./*.bam \
--o Sexes_combined.mpileup
-````
 
-I am repeating the process with all replicates merged to calculate Fst to see if that clears up some of the high Fst estimates.
+samtools mpileup -Q 20 -q 20 -d 500 \
+-f all_ref.fa \
+in.bam \
+-o out.mpileup
 
-````
-samtools mpileup -Q 20 -q 20 -d 900 \
--f /2/scratch/TylerA/Dmelgenome/gatk/dmel-all-chromosome-r6.23.fa \
-./*.bam \
--o merged.mpileup
-````
-## Remove repeat regions
+### mpileup files were created for 1) treatments where sexes were combined 2) treatments where sexes were kept seperately 3) 8 individual bam files created by merging all sequences together and randomly sampling to creat 8 'null' populations.
 
-````
+## 7) Repeteive regions were removed using popoolation v. 1.2.2. These regions were the known transposable elements in the reference genome version 6.23, other "blacklisted" regions that have been shown to cause issues in SNP calling in the drosophila genome (Amemiya et al. 2019; https://github.com/Boyle-Lab/Blacklist/blob/master/lists/dm6-blacklist.v2.bed.gz), and a created bedfile to isolate regions that show suspiciously high inter-sex Fst and were verified to be transposable or repetative elements.
+
 
 curl -O http://ftp.flybase.net/genomes/Drosophila_melanogaster/dmel_r6.23_FB2018_04/fasta/dmel-all-transposon-r6.23.fasta.gz
-### placed with reference
 
-/usr/local/RepeatMasker/RepeatMasker \
+
+### Identify repeats using RepeatMasker
+
+/path/to/RepeatMasker \
 -pa 20 \
---lib /2/scratch/TylerA/Dmelgenome/dmel-all-transposon-r6.23.fasta \
---gff \
-/2/scratch/TylerA/Dmelgenome/dmel-all-chromosome-r6.23.fasta	
+--lib /path/to/transposons/dmel-all-transposon-r6.23.fasta \
+--gff /path/to/reference/genome/dmel-all-chromosome-r6.23.fasta	
 
-#perl /home/tylera/bin/popoolation_1.2.2/basic-pipeline/filter-pileup-by-gtf.pl --gtf /2/scratch/TylerA/Dmelgenome/dmel-all-chromosome-#r6.23.fasta.out.gff --input ./Sexes_combined.mpileup --output ./Sexes_combined_norepeats.mpileup
+perl /popoolation_1.2.2/basic-pipeline/filter-pileup-by-gtf.pl --gtf /ReapeatMasker/output/Dmelgenome/dmel-all-chromosome-#r6.23.fasta.out.gff \
+--input in.mpileup --output out.mpileup
 
-#/usr/local/RepeatMasker/RepeatMasker -pa 10 -species drosophila -gff dmel-all-chromosome-r6.23.fasta
+
+
+
+
+
+
+
+
+````
+
+
 
 
 # Remove suspicious areas
