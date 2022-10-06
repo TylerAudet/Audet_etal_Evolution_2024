@@ -73,8 +73,11 @@ perl /popoolation_1.2.2/basic-pipeline/filter-pileup-by-gtf.pl --gtf /ReapeatMas
 
 
 
+Next step:
 
+Use bedtools to mask the 'blacklist' directly from the genome? This will require a lot of memory and time.
 
+work through to SNP calling between male vs. females to identify problem regions in C1 and C2 , extract those from a VCF, make VCF to a gff, mask those reasons with this script
 
 
 
