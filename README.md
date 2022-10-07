@@ -54,7 +54,8 @@ in.bam \
 
 ### mpileup files were created for 1) treatments where sexes were combined 2) treatments where sexes were kept seperately 3) 8 individual bam files created by merging all sequences together and randomly sampling to creat 8 'null' populations.
 
-## 7) Repeteive regions were removed using popoolation v. 1.2.2. These regions were the known transposable elements in the reference genome version 6.23, other "blacklisted" regions that have been shown to cause issues in SNP calling in the drosophila genome (Amemiya et al. 2019; https://github.com/Boyle-Lab/Blacklist/blob/master/lists/dm6-blacklist.v2.bed.gz), and a created bedfile to isolate regions that show suspiciously high inter-sex Fst and were verified to be transposable or repetative elements.
+## 7) Repeteive regions were removed using popoolation v. 1.2.2.
+### These regions were the known transposable elements in the reference genome version 6.23, other "blacklisted" regions that have been shown to cause issues in SNP calling in the drosophila genome (Amemiya et al. 2019; https://github.com/Boyle-Lab/Blacklist/blob/master/lists/dm6-blacklist.v2.bed.gz), and a created bedfile to isolate regions that show suspiciously high inter-sex Fst and were verified to be transposable or repetative elements.
 
 
 curl -O http://ftp.flybase.net/genomes/Drosophila_melanogaster/dmel_r6.23_FB2018_04/fasta/dmel-all-transposon-r6.23.fasta.gz
@@ -67,8 +68,25 @@ curl -O http://ftp.flybase.net/genomes/Drosophila_melanogaster/dmel_r6.23_FB2018
 --lib /path/to/transposons/dmel-all-transposon-r6.23.fasta \
 --gff /path/to/reference/genome/dmel-all-chromosome-r6.23.fasta	
 
-perl /popoolation_1.2.2/basic-pipeline/filter-pileup-by-gtf.pl --gtf /ReapeatMasker/output/Dmelgenome/dmel-all-chromosome-#r6.23.fasta.out.gff \
---input in.mpileup --output out.mpileup
+
+### Remove repetetive regions
+
+perl /popoolation_1.2.2/basic-pipeline/filter-pileup-by-gtf.pl \
+--gtf /ReapeatMasker/output/Dmelgenome/dmel-all-chromosome-#r6.23.fasta.out.gff \
+--input in.mpileup \
+--output out.mpileup
+
+## 8) Identify and remove indels
+
+perl /path/to/popoolation2_1201/indel_filtering/identify-indel-regions.pl \
+--input in.mpileup \
+--output out.gtf \
+--indel-window 15
+
+perl /path/to/popoolation_1.2.2/basic-pipeline/filter-pileup-by-gtf.pl \
+--gtf in.gtf \
+--input in.mpileup \
+--output out_noindel.mpileup
 
 
 
@@ -81,28 +99,6 @@ work through to SNP calling between male vs. females to identify problem regions
 
 
 
-````
-
-
-
-
-# Remove suspicious areas
-
-perl /home/tylera/bin/popoolation_1.2.2/basic-pipeline/filter-pileup-by-gtf.pl --gtf /2/scratch/TylerA/SSD/suspicious_coverage.gff --input ./Sexes_combined_norepeats.mpileup --output ./Sexes_combined_norepeats_nosus.mpileup
-
-# ID indels
-perl /home/tylera/bin/popoolation2_1201/indel_filtering/identify-indel-regions.pl --input ./Sexes_combined_norepeats_nosus.mpileup --output ./Sexes_combined_norepeat_nosus.gtf --indel-window 10
-
-#Pileup entries processed: 112150681
-#Pileup entries containing at least one indel: 1392619
-#How many bp of the reference are covered by indel-regions: 24178268
-
-
-# hard masks indels
-
-perl /home/tylera/bin/popoolation_1.2.2/basic-pipeline/filter-pileup-by-gtf.pl --gtf ./Sexes_combined_norepeat_nosus.gtf --input ./Sexes_combined_norepeats_nosus.mpileup --output ./Sexes_combined_norepeat_nosus_noindel.mpileup
-
-````
 
 ## Make a VCF with poolSNP
 
