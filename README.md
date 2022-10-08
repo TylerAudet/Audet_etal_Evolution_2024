@@ -106,12 +106,12 @@ for sexes combined:
 ````
 
 # Need to pull out chromosome by chromosome because it is very memory intensive to ru poolSNP on everything at once
-awk '{if ($1 == "2L") {print $0}}' merged_norepeat_nosus.mpileup > 2L.mpileup
-awk '{if ($1 == "2R") {print $0}}' merged_norepeat_nosus.mpileup > 2R.mpileup
-awk '{if ($1 == "3L") {print $0}}' merged_norepeat_nosus.mpileup > 3L.mpileup
-awk '{if ($1 == "3R") {print $0}}' merged_norepeat_nosus.mpileup > 3R.mpileup
-awk '{if ($1 == "X") {print $0}}' merged_norepeat_nosus.mpileup > X.mpileup
-awk '{if ($1 == "4") {print $0}}' merged_norepeat_nosus.mpileup > 4.mpileup
+awk '{if ($1 == "2L") {print $0}}' /scratch/audett/SSD/Stewart/Stewart_repeatmasked_indelmasked.mpileup > /scratch/audett/SSD/Stewart/2L.mpileup
+awk '{if ($1 == "2R") {print $0}}' /scratch/audett/SSD/Stewart/Stewart_repeatmasked_indelmasked.mpileup > /scratch/audett/SSD/Stewart/2R.mpileup
+awk '{if ($1 == "3L") {print $0}}' /scratch/audett/SSD/Stewart/Stewart_repeatmasked_indelmasked.mpileup > /scratch/audett/SSD/Stewart/3L.mpileup
+awk '{if ($1 == "3R") {print $0}}' /scratch/audett/SSD/Stewart/Stewart_repeatmasked_indelmasked.mpileup > /scratch/audett/SSD/Stewart/3R.mpileup
+awk '{if ($1 == "X") {print $0}}' /scratch/audett/SSD/Stewart.Stewart_repeatmasked_indelmasked.mpileup > /scratch/audett/SSD/Stewart/X.mpileup
+awk '{if ($1 == "4") {print $0}}' /scratch/audett/SSD/Stewart/Stewart_repeatmasked_indelmasked.mpileup > /scratch/audett/SSD/Stewart/4.mpileup
 
 # Run poolSNP one chromosome at a time
 bash /home/tylera/bin/PoolSNP-master/PoolSNP.sh \
