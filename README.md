@@ -1,6 +1,6 @@
 
 # 1) Trimming was done with bbduk (bbmap v. 38.86)
-
+```
 bbduk.sh \
 in1=R1.fastq \
 in2=R2.fastq \
@@ -9,33 +9,34 @@ out2=R2_trimmed.fastq \
 ref=AllAdapters.fa \
 threads=32 ftr=149 ktrim=r k=23 mink=7 hdist=1 tpe tbo \
 qtrim=rl trimq=20 minlength=36
-
+```
 # 2) Genome was mapped using bwa-mem v. 0.7.17 to Drosophila reference genome 6.23
-
+```
 bwa mem -t 32 \
 -M ref.fa \
 R1_trimmed.fastq \
 R2_trimmed.fastq \
 > mapped.sam
-
+```
 # 3) Sam files were converted to bam files using Samtools v. 1.12
-
+```
 samtools view -b -@32 mapped.sam | \
 samtools sort mapped.bam | \
 samtools view -b -q 20 -@ 32 -o mapped.bam
-
+```
 # 4) Supplimentary reads from an additional run of sexuencing were merged together with samtoold v. 1.12
 
-## This was done by first seperating each run of sequencing in to two directories called run1 and run2, and finally merging these directories in to a final directory called merged. This method was used to merge suppletary runs of sequencing together as well as to merge sexes for analyses where sexes are pooled together.
-
+This was done by first seperating each run of sequencing in to two directories called run1 and run2, and finally merging these directories in to a final directory called merged. This method was used to merge suppletary runs of sequencing together as well as to merge sexes for analyses where sexes are pooled together.
+```
 samtools merge merged.bam \
 run1/*.bam \
 run2/*.bam
-
+```
 # 5) Mark and then remove read groups using Samtools v. 1.12
 
-### Done in four stages. Files are first sorted by name, then fixmate is used to add quality tags to reads. Then files are sorted by coordinate and mardup is used to mark the duplicates with the -r flags to remove those duplicate reads.
+Done in four stages. Files are first sorted by name, then fixmate is used to add quality tags to reads. Then files are sorted by coordinate and mardup is used to mark the duplicates with the -r flags to remove those duplicate reads.
 
+```
 samtools sort -n -@ 32 -o out.bam in.bam
 
 samtools fixmate -m -u -@ 32 in.bam out.bam
@@ -43,59 +44,88 @@ samtools fixmate -m -u -@ 32 in.bam out.bam
 samtools sort -@ 32 -o out.bam in.bam
 
 samtools markdup -l 150 -r -s -f stats.txt -d 2500 -@ 32 in.bam out.bam
+```
 
-## 6) Samtools v. 1.12 was used to create an mpileup with sequence and SNP quality thresholds set to 20 and maximum depth set to 1.5x expected depth to remove suspiciously high coverage areas.
-
-
+# 6) Samtools v. 1.12 was used to create an mpileup with sequence and SNP quality thresholds set to 20 and maximum depth set to 1.5x expected depth to remove suspiciously high coverage areas.
+```
 samtools mpileup -Q 20 -q 20 -d 500 \
 -f all_ref.fa \
 in.bam \
 -o out.mpileup
+```
+mpileup files were created for 1) treatments where sexes were combined 2) treatments where sexes were kept seperately 3) 8 individual bam files created by merging all sequences together and randomly sampling to creat 8 'null' populations.
 
-### mpileup files were created for 1) treatments where sexes were combined 2) treatments where sexes were kept seperately 3) 8 individual bam files created by merging all sequences together and randomly sampling to creat 8 'null' populations.
-
-## 7) Repeteive regions were removed using popoolation v. 1.2.2.
-### These regions were the known transposable elements in the reference genome version 6.23, other "blacklisted" regions that have been shown to cause issues in SNP calling in the drosophila genome (Amemiya et al. 2019; https://github.com/Boyle-Lab/Blacklist/blob/master/lists/dm6-blacklist.v2.bed.gz), and a created bedfile to isolate regions that show suspiciously high inter-sex Fst and were verified to be transposable or repetative elements.
-
-
+# 7) Repeteive regions were removed using popoolation v. 1.2.2.
+These regions were the known transposable elements in the reference genome version 6.23, other "blacklisted" regions that have been shown to cause issues in SNP calling in the drosophila genome (Amemiya et al. 2019; https://github.com/Boyle-Lab/Blacklist/blob/master/lists/dm6-blacklist.v2.bed.gz), and a created bedfile to isolate regions that show suspiciously high inter-sex Fst and were verified to be transposable or repetative elements.
+```
 curl -O http://ftp.flybase.net/genomes/Drosophila_melanogaster/dmel_r6.23_FB2018_04/fasta/dmel-all-transposon-r6.23.fasta.gz
+```
 
-
-### Identify repeats using RepeatMasker
-
+## First Identify repeats using RepeatMasker v. 4
+```
 /path/to/RepeatMasker \
 -pa 20 \
 --lib /path/to/transposons/dmel-all-transposon-r6.23.fasta \
 --gff /path/to/reference/genome/dmel-all-chromosome-r6.23.fasta	
+```
 
-
-### Remove repetetive regions
-
+## Next remove repetetive regions using popoolation v. 1.2.2.
+```
 perl /popoolation_1.2.2/basic-pipeline/filter-pileup-by-gtf.pl \
 --gtf /ReapeatMasker/output/Dmelgenome/dmel-all-chromosome-#r6.23.fasta.out.gff \
 --input in.mpileup \
 --output out.mpileup
-
-## 8) Identify and remove indels
-
+```
+# 8) Identify indels using popoolation 2 v. 1.2 and remove them using popoolation v 1.2 
+```
 perl /path/to/popoolation2_1201/indel_filtering/identify-indel-regions.pl \
 --input in.mpileup \
 --output out.gtf \
 --indel-window 15
-
+```
+```
 perl /path/to/popoolation_1.2.2/basic-pipeline/filter-pileup-by-gtf.pl \
 --gtf in.gtf \
 --input in.mpileup \
 --output out_noindel.mpileup
+```
+
+# 9) SNP calling was performed using poolSNP v. 1
+
+This was done chromosome by chromosome to save memory. So `awk` was first used to break mpileup in to chromosomes.
+
+```
+bash /PoolSNP-master/PoolSNP.sh \
+mpileup=in.mpileup \
+reference=/ref/all_ref.fa \
+names=C1,C2,E1,E2,L1,L2,S1,S2 \
+max-cov=0.98 \
+min-cov=30 \
+min-count=10 \
+min-freq=0.01 \
+miss-frac=0.2 \
+jobs=32 \
+BS=1 \
+output=out.vcf
+```
+
+# 10) This VCF was filtered for the ENCODE blacklist using bedtools v. 2.3
+```
+bedtools intersect -v -a in.vcf \
+-b /blacklist/dm6-blacklist.v2.bed \
+> out.vcf
+```
 
 
 
 
-Next step:
 
-Use bedtools to mask the 'blacklist' directly from the genome? This will require a lot of memory and time.
 
-work through to SNP calling between male vs. females to identify problem regions in C1 and C2 , extract those from a VCF, make VCF to a gff, mask those reasons with this script
+
+
+
+
+
 
 
 
