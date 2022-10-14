@@ -18,12 +18,16 @@ R1_trimmed.fastq \
 R2_trimmed.fastq \
 > mapped.sam
 ```
-# 3) Sam files were converted to bam files using Samtools v. 1.12
+
+# 3) Sam files were converted to bam files using Samtools v. 1.12 at the same time the core genome was extracted to filter out other contigs including reads that mapped to commensal genomes
 ```
-samtools view -b -@32 mapped.sam | \
-samtools sort mapped.bam | \
-samtools view -b -q 20 -@ 32 -o mapped.bam
+samtools view -h -@ 32 in.sam | \
+awk '{if ($3 == "2L" || $3 == "2R" || $3 == "3L" || $3 == "3R" || $3 == "4" || $3 == "X" || \
+$2 == "SN:2L" || $2 == "SN:2R" || $2 == "SN:3L" || $2 == "SN:3R" || $2 == "SN:4" || $2 == "SN:X") {print $0}}' | \
+samtools view -b -@ 32 -o out.bam
 ```
+
+
 # 4) Supplimentary reads from an additional run of sexuencing were merged together with samtoold v. 1.12
 
 This was done by first seperating each run of sequencing in to two directories called run1 and run2, and finally merging these directories in to a final directory called merged. This method was used to merge suppletary runs of sequencing together as well as to merge sexes for analyses where sexes are pooled together.
@@ -46,16 +50,44 @@ samtools sort -@ 32 -o out.bam in.bam
 samtools markdup -l 150 -r -s -f stats.txt -d 2500 -@ 32 in.bam out.bam
 ```
 
-# 6) Samtools v. 1.12 was used to create an mpileup with sequence and SNP quality thresholds set to 20 and maximum depth set to 1.5x expected depth to remove suspiciously high coverage areas.
+# 6) Read-groups were added using picard v 2.26 and then indels were marked and realigned around using GATK v. 3.8
+
 ```
-samtools mpileup -Q 20 -q 20 -d 500 \
--f all_ref.fa \
+java -jar -Xmx10g /picard.jar AddOrReplaceReadGroups \
+INPUT=in.bam \
+OUTPUT=out_RG.bam \
+SORT_ORDER=coordinate \
+RGID=library \
+RGLB=library \
+RGPL=illumina \
+RGSM=Stewart \
+RGPU=library \
+CREATE_INDEX=true \
+VALIDATION_STRINGENCY=SILENT
+```
+```
+java -Xmx32g -jar /GenomeAnalysisTK.jar -I in_RG.bam \
+-R /ref/dmel-all-chromosome-r6.23.fasta \
+-T RealignerTargetCreator \
+-o out.intervals
+```
+```
+java -Xmx10g -jar /GenomeAnalysisTK.jar -I in_RG.bam \
+-R /ref/dmel-all-chromosome-r6.23.fasta \
+-T IndelRealigner -targetIntervals in.intervals \
+-o out.bam
+```
+
+# 7) Samtools v. 1.12 was used to create an mpileup with sequence and SNP quality thresholds set to 20 and maximum depth set to 1.5x expected depth to remove suspiciously high coverage areas.
+```
+samtools mpileup -Q 20 -q 20 -d 300 \
+-f /ref/dmel-all-chromosome-r6.23.fasta \
 in.bam \
 -o out.mpileup
 ```
 mpileup files were created for 1) treatments where sexes were combined 2) treatments where sexes were kept seperately 3) 8 individual bam files created by merging all sequences together and randomly sampling to creat 8 'null' populations.
 
-# 7) Repeteive regions were removed using popoolation v. 1.2.2.
+# 8) Repeteive regions were removed using popoolation v. 1.2.2.
 These regions were the known transposable elements in the reference genome version 6.23, other "blacklisted" regions that have been shown to cause issues in SNP calling in the drosophila genome (Amemiya et al. 2019; https://github.com/Boyle-Lab/Blacklist/blob/master/lists/dm6-blacklist.v2.bed.gz), and a created bedfile to isolate regions that show suspiciously high inter-sex Fst and were verified to be transposable or repetative elements.
 ```
 curl -O http://ftp.flybase.net/genomes/Drosophila_melanogaster/dmel_r6.23_FB2018_04/fasta/dmel-all-transposon-r6.23.fasta.gz
@@ -76,7 +108,7 @@ perl /popoolation_1.2.2/basic-pipeline/filter-pileup-by-gtf.pl \
 --input in.mpileup \
 --output out.mpileup
 ```
-# 8) Identify indels using popoolation 2 v. 1.2 and remove them using popoolation v 1.2 
+# 9) Identify indels using popoolation 2 v. 1.2 and remove them using popoolation v 1.2 
 ```
 perl /path/to/popoolation2_1201/indel_filtering/identify-indel-regions.pl \
 --input in.mpileup \
@@ -90,7 +122,7 @@ perl /path/to/popoolation_1.2.2/basic-pipeline/filter-pileup-by-gtf.pl \
 --output out_noindel.mpileup
 ```
 
-# 9) SNP calling was performed using poolSNP v. 1
+# 10) SNP calling was performed using poolSNP v. 1
 
 This was done chromosome by chromosome to save memory. So `awk` was first used to break mpileup in to chromosomes.
 
@@ -109,7 +141,7 @@ BS=1 \
 output=out.vcf
 ```
 
-# 10) This VCF was filtered for the ENCODE blacklist using bedtools v. 2.3
+# 11) This VCF was filtered for the ENCODE blacklist using bedtools v. 2.3
 ```
 bedtools intersect -v -a in.vcf \
 -b /blacklist/dm6-blacklist.v2.bed \
