@@ -113,7 +113,7 @@ perl /popoolation_1.2.2/basic-pipeline/filter-pileup-by-gtf.pl \
 perl /path/to/popoolation2_1201/indel_filtering/identify-indel-regions.pl \
 --input in.mpileup \
 --output out.gtf \
---indel-window 15
+--indel-window 10
 ```
 ```
 perl /path/to/popoolation_1.2.2/basic-pipeline/filter-pileup-by-gtf.pl \
