@@ -181,62 +181,213 @@ There are 405 overlapping regions
 # pull the overlapping areas out of vcf
 vcftools --vcf /home/audett/scratch/SSD/Analysis/sexesMerged/sexesMerged_clean.vcf --bed /home/audett/scratch/SSD/Analysis/highfst_lowCMH.bed --out /home/audett/scratch/SSD/Analysis/top5fst_bottom1CMH --recode --keep-INFO-all
 
+grep -v 'NO_VARIATION\|intron_variant'  /home/audett/scratch/SSD/Analysis/top5fst_bottom1CMH_annotated.txt > /home/audett/scratch/SSD/Analysis/top5fst_bottom1CMH_interesting.txt
 
-java -Xmx32g -jar /usr/local/gatk/GenomeAnalysisTK.jar -R /2/scratch/TylerA/Dmelgenome/gatk/dmel-all-chromosome-r6.23.fasta -V genes-of-interest.recode.vcf  -T VariantsToTable -F CHROM -F POS -F TYPE -F REF -F ALT -o interesting_loci.table
-
-
-
-
-
-grep -v 'NO_VARIATION'  loci.ann.table > loci.ann.filtered.table
-grep -v 'intron_variant'  loci.ann.filtered.table > loci.ann.filtered.twice.table
-
-awk '{print $8}'  > loci.ann.filtered.twice.table test.table
-
-awk -F '[\|]' '{ print $4 }' test.table > gene_ids.table
-
-
-awk '{print $1 " " $2}' loci.ann.filtered.twice.table test.table > locations.table
-
-#First 6 lines are uninformative or white space
-
-sed -i '1,6d' locations.table
-sed -i '1,6d' gene_ids.table
-````
-This gives me 130 genes that have both an fst > 0.75 and a CMH padj < 0.01 with SNPs in a genic region.
-
-# Looking for selective sweeps with Tajima's D
+awk '{print $8}' /home/audett/scratch/SSD/Analysis/top5fst_bottom1CMH_interesting.txt | awk -F '[\|]' '{if (NR>20) print $4}' | 
+awk '{ a[$1]++ } END { for (b in a) { print b } }' > genes_highfst_lowcmh.txt
 
 ````
 
-awk '{print $1,$2,$3,$4,$5,$6}' Sexes_combined_norepeats_nosus.mpileup > C1.pileup
-awk '{print $1,$2,$3,$7,$8,$9}' Sexes_combined_norepeats_nosus.mpileup > C2.pileup
-awk '{print $1,$2,$3,$10,$11,$12}' Sexes_combined_norepeats_nosus.mpileup > E1.pileup
-awk '{print $1,$2,$3,$13,$14,$15}' Sexes_combined_norepeats_nosus.mpileup > E2.pileup
 
-awk '{print $1,$2,$3,$16,$17,$18}' Sexes_combined_norepeats_nosus.mpileup > L1.pileup
-awk '{print $1,$2,$3,$19,$20,$21}' Sexes_combined_norepeats_nosus.mpileup > L2.pileup
-awk '{print $1,$2,$3,$22,$23,$24}' Sexes_combined_norepeats_nosus.mpileup > S1.pileup
-awk '{print $1,$2,$3,$25,$26,$27}' Sexes_combined_norepeats_nosus.mpileup > S2.pileup
+# Looking for selective sweeps with pool-HMM
+
+````
+
+# Pull out samples from the mpileup
+
+awk '{print $1,$2,$3,$4,$5,$6}' /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/sexesMerged__indelsmasked.mpileup \
+> /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/C1.pileup
+
+awk '{print $1,$2,$3,$7,$8,$9}' /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/sexesMerged__indelsmasked.mpileup \
+> /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/C2.pileup
+
+awk '{print $1,$2,$3,$10,$11,$12}' /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/sexesMerged__indelsmasked.mpileup \
+> /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/E1.pileup
+
+awk '{print $1,$2,$3,$13,$14,$15}' /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/sexesMerged__indelsmasked.mpileup \
+> /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/E2.pileup
+
+awk '{print $1,$2,$3,$16,$17,$18}' /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/sexesMerged__indelsmasked.mpileup \
+> /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/L1.pileup
+
+awk '{print $1,$2,$3,$19,$20,$21}' /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/sexesMerged__indelsmasked.mpileup \
+> /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/L2.pileup
+
+awk '{print $1,$2,$3,$22,$23,$24}' /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/sexesMerged__indelsmasked.mpileup \
+> /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/S1.pileup
+
+awk '{print $1,$2,$3,$25,$26,$27}' /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/sexesMerged__indelsmasked.mpileup \
+> /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/S2.pileup
+
+# Run pool-HMM on each sample for each chromosome
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/E2 -n 400 -R 2L -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/E2 -n 400 -R 2R -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/E2 -n 400 -R 3L -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/E2 -n 400 -R 3R -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/E2 -n 300 -R X -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/E2 -n 400 -R 4 -a unknown -P 8 -p -k 0.001 --theta 0.005
 
 
-python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E2 -n 400 -R 2L -a unknown -P 8 -p -k 0.001 --theta 0.005
-python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E2 -n 400 -R 2R -a unknown -P 8 -p -k 0.001 --theta 0.005
-python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E2 -n 400 -R 3L -a unknown -P 8 -p -k 0.001 --theta 0.005
-python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E2 -n 400 -R 3R -a unknown -P 8 -p -k 0.001 --theta 0.005
-python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E2 -n 300 -R X -a unknown -P 8 -p -k 0.001 --theta 0.005
-python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E2 -n 400 -R 4 -a unknown -P 8 -p -k 0.001 --theta 0.005
 
-python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E1 -n 400 -R 2L -a unknown -P 8 -p -k 0.001 --theta 0.005
-python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E1 -n 400 -R 2R -a unknown -P 8 -p -k 0.001 --theta 0.005
-python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E1 -n 400 -R 3L -a unknown -P 8 -p -k 0.001 --theta 0.005
-python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E1 -n 400 -R 3R -a unknown -P 8 -p -k 0.001 --theta 0.005
-python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E1 -n 300 -R X -a unknown -P 8 -p -k 0.001 --theta 0.005
-python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E1 -n 400 -R 4 -a unknown -P 8 -p -k 0.001 --theta 0.005
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/E1 -n 400 -R 2L -a unknown -P 8 -p -k 0.001 --theta 0.005
 
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/E1 -n 400 -R 2R -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/E1 -n 400 -R 3L -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/E1 -n 400 -R 3R -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/E1 -n 300 -R X -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/E1 -n 400 -R 4 -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/C1 -n 400 -R 2L -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/C1 -n 400 -R 2R -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/C1 -n 400 -R 3L -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/C1 -n 400 -R 3R -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/C1 -n 300 -R X -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/C1 -n 400 -R 4 -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/C2 -n 400 -R 2L -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/C2 -n 400 -R 2R -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/C2 -n 400 -R 3L -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/C2 -n 400 -R 3R -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/C2 -n 300 -R X -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/C2 -n 400 -R 4 -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/L1 -n 400 -R 2L -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/L1 -n 400 -R 2R -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/L1 -n 400 -R 3L -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/L1 -n 400 -R 3R -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/L1 -n 300 -R X -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/L1 -n 400 -R 4 -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/L2 -n 400 -R 2L -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/L2 -n 400 -R 2R -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/L2 -n 400 -R 3L -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/L2 -n 400 -R 3R -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/L2 -n 300 -R X -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/L2 -n 400 -R 4 -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/S1 -n 400 -R 2L -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/S1 -n 400 -R 2R -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/S1 -n 400 -R 3L -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/S1 -n 400 -R 3R -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/S1 -n 300 -R X -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/S1 -n 400 -R 4 -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/S2 -n 400 -R 2L -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/S2 -n 400 -R 2R -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/S2 -n 400 -R 3L -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/S2 -n 400 -R 3R -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/S2 -n 300 -R X -a unknown -P 8 -p -k 0.001 --theta 0.005
+
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolHMM-1.4.4-custom.1/pool-hmm.py \
+-f /home/audett/scratch/SSD/Analysis/sexesMerged/pileups/S2 -n 400 -R 4 -a unknown -P 8 -p -k 0.001 --theta 0.005
 
 
 ~~~~~
+
+
+
+
+
+
+
+
 
 sed 1d E1_2L.stat > E1_2L.txt
 sed 1d E1_2R.stat > E1_2R.txt
@@ -358,127 +509,95 @@ pool-hmm code: python ~/bin/1.4.4/pool-hmm.py -f /2/scratch/TylerA/SSD/bwamap/E1
 
 # Calculataing Tajima's D
 
-````
 
+# resample chromosomes to the same depth
 
-~~~
-
-python /2/scratch/TylerA/SSD/scripts/VCF2sync.py \
---vcf poolSNP_reps_2L.vcf \
-> 2L.sync
-
-
-python /2/scratch/TylerA/SSD/scripts/VCF2sync.py \
---vcf poolSNP_reps_2R.vcf \
-> 2R.sync
-
-python /2/scratch/TylerA/SSD/scripts/VCF2sync.py \
---vcf poolSNP_reps_3L.vcf \
-> 3L.sync
-
-python /2/scratch/TylerA/SSD/scripts/VCF2sync.py \
---vcf poolSNP_reps_3R.vcf \
-> 3R.sync
-
-python /2/scratch/TylerA/SSD/scripts/VCF2sync.py \
---vcf poolSNP_reps_4.vcf \
-> 4.sync
-
-python /2/scratch/TylerA/SSD/scripts/VCF2sync.py \
---vcf poolSNP_reps_X.vcf \
-> X.sync
-
-#resample
-
-python /2/scratch/TylerA/SSD/scripts/SubsampleSync.py \
---sync 2L.sync \
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/SubsampleSync.py \
+--sync /home/audett/scratch/SSD/Analysis/sexesMerged/syncs/2L.sync \
 --target-cov 300 \
 --min-cov 50 \
-> subsample_2L.sync
+> /home/audett/scratch/SSD/Analysis/sexesMerged/syncs/subsample_2L.sync
 
-python /2/scratch/TylerA/SSD/scripts/SubsampleSync.py \
---sync 2R.sync \
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/SubsampleSync.py \
+--sync /home/audett/scratch/SSD/Analysis/sexesMerged/syncs/2R.sync \
 --target-cov 300 \
 --min-cov 50 \
-> subsample_2R.sync
+> /home/audett/scratch/SSD/Analysis/sexesMerged/syncs/subsample_2R.sync
 
-python /2/scratch/TylerA/SSD/scripts/SubsampleSync.py \
---sync 3L.sync \
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/SubsampleSync.py \
+--sync /home/audett/scratch/SSD/Analysis/sexesMerged/syncs/3L.sync \
 --target-cov 300 \
 --min-cov 50 \
-> subsample_3L.sync
+> /home/audett/scratch/SSD/Analysis/sexesMerged/syncs/subsample_3L.sync
 
-python /2/scratch/TylerA/SSD/scripts/SubsampleSync.py \
---sync 3R.sync \
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/SubsampleSync.py \
+--sync /home/audett/scratch/SSD/Analysis/sexesMerged/syncs/3R.sync \
 --target-cov 300 \
 --min-cov 50 \
-> subsample_3R.sync
+> /home/audett/scratch/SSD/Analysis/sexesMerged/syncs/subsample_3R.sync
 
-python /2/scratch/TylerA/SSD/scripts/SubsampleSync.py \
---sync 4.sync \
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/SubsampleSync.py \
+--sync /home/audett/scratch/SSD/Analysis/sexesMerged/syncs/4.sync \
 --target-cov 300 \
 --min-cov 50 \
-> subsample_4.sync
+> /home/audett/scratch/SSD/Analysis/sexesMerged/syncs/subsample_4.sync
 
-python /2/scratch/TylerA/SSD/scripts/SubsampleSync.py \
---sync X.sync \
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/SubsampleSync.py \
+--sync /home/audett/scratch/SSD/Analysis/sexesMerged/syncs/X.sync \
 --target-cov 300 \
 --min-cov 50 \
-> subsample_X.sync
-
-#calculate true window size
-
-#awk '{if ($1 == "2L") {print $0}}' /2/scratch/TylerA/SSD/bwamap/Sexes_combined_norepeat_nosus.gtf > ./2L_indels.gtf
-
-#awk '{if ($1 == "2L") {print $0}}' /2/scratch/TylerA/Dmelgenome/dmel-all-chromosome-r6.23.fasta.out.gff > ./2L_transposons.gtf
+> /home/audett/scratch/SSD/Analysis/sexesMerged/syncs/subsample_X.sync
 
 
+
+
+# True windows
 
 
 python /2/scratch/TylerA/SSD/scripts/TrueWindows.py \
---badcov poolSNP_reps_2L_BS.txt \
---window 10000 \
---step 10000 \
+--badcov /home/audett/scratch/SSD/Analysis/sexesMerged/SNPcalls/2L_BS.txt \
+--window 5000 \
+--step 5000 \
 --chromosomes 2L:23513712 \
---output truewindows_2L
+--output /home/audett/scratch/SSD/Analysis/sexesMerged/pi/truewindows_2L
 
 python /2/scratch/TylerA/SSD/scripts/TrueWindows.py \
---badcov poolSNP_reps_2R_BS.txt \
---window 10000 \
---step 10000 \
+--badcov /home/audett/scratch/SSD/Analysis/sexesMerged/SNPcalls/2R_BS.txt \
+--window 5000 \
+--step 5000 \
 --chromosomes 2R:25286936 \
---output truewindows_2R
+--output /home/audett/scratch/SSD/Analysis/sexesMerged/pi/truewindows_2R
 
 
 python /2/scratch/TylerA/SSD/scripts/TrueWindows.py \
---badcov poolSNP_reps_3L_BS.txt \
---window 10000 \
---step 10000 \
+--badcov /home/audett/scratch/SSD/Analysis/sexesMerged/SNPcalls/3L_BS.txt \
+--window 5000 \
+--step 5000 \
 --chromosomes 3L:28110227 \
---output truewindows_3L
+--output /home/audett/scratch/SSD/Analysis/sexesMerged/pi/truewindows_3L
 
 
 python /2/scratch/TylerA/SSD/scripts/TrueWindows.py \
---badcov poolSNP_reps_3R_BS.txt \
---window 10000 \
---step 10000 \
+--badcov /home/audett/scratch/SSD/Analysis/sexesMerged/SNPcalls/3R_BS.txt \
+--window 5000 \
+--step 5000 \
 --chromosomes 3R:32079331 \
---output truewindows_3R
+--output /home/audett/scratch/SSD/Analysis/sexesMerged/pi/truewindows_3R
 
 python /2/scratch/TylerA/SSD/scripts/TrueWindows.py \
---badcov poolSNP_reps_4_BS.txt \
---window 10000 \
---step 10000 \
+--badcov /home/audett/scratch/SSD/Analysis/sexesMerged/SNPcalls/4_BS.txt \
+--window 5000 \
+--step 5000 \
 --chromosomes 4:1348131 \
---output truewindows_4
+--output /home/audett/scratch/SSD/Analysis/sexesMerged/pi/truewindows_4
 
 
 python /2/scratch/TylerA/SSD/scripts/TrueWindows.py \
---badcov poolSNP_reps_X_BS.txt \
---window 10000 \
---step 10000 \
+--badcov /home/audett/scratch/SSD/Analysis/sexesMerged/SNPcalls/X_BS.txt \
+--window 5000 \
+--step 5000 \
 --chromosomes X:23542271 \
---output truewindows_X
+--output /home/audett/scratch/SSD/Analysis/sexesMerged/pi/truewindows_X
 
 
 # Calculate pop parameters
