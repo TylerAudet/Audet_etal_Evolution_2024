@@ -602,72 +602,72 @@ python /2/scratch/TylerA/SSD/scripts/TrueWindows.py \
 
 # Calculate pop parameters
 
-python /2/scratch/TylerA/SSD/scripts/PoolGen_var.py \
---input 200_subsample_2L.sync \
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolGen_var.py \
+--input /home/audett/scratch/SSD/Analysis/sexesMerged/syncs/subsample_2L.sync \
 --pool-size 200,200,200,200,200,200,200,200 \
 --min-count 2 \
---window 10000 \
---step 10000 \
---sitecount truewindows_2L-10000-10000.txt \
+--window 5000 \
+--step 5000 \
+--sitecount /home/audett/scratch/SSD/Analysis/sexesMerged/pi/truewindows_2L-5000-5000.txt \
 --min-sites-frac 0.75 \
---output 200_2L_D
+--output window_5000_subsample_300_2L
 
-python /2/scratch/TylerA/SSD/scripts/PoolGen_var.py \
---input subsample_2R.sync \
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolGen_var.py \
+--input /home/audett/scratch/SSD/Analysis/sexesMerged/syncs/subsample_2R.sync \
 --pool-size 200,200,200,200,200,200,200,200 \
 --min-count 2 \
---window 10000 \
---step 10000 \
---sitecount truewindows_2R-10000-10000.txt \
+--window 5000 \
+--step 5000 \
+--sitecount /home/audett/scratch/SSD/Analysis/sexesMerged/pi/truewindows_2R-5000-5000.txt \
 --min-sites-frac 0.75 \
---output 2R_D
+--output window_5000_subsample_300_2R
 
-python /2/scratch/TylerA/SSD/scripts/PoolGen_var.py \
---input subsample_3L.sync \
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolGen_var.py \
+--input /home/audett/scratch/SSD/Analysis/sexesMerged/syncs/subsample_3L.sync \
 --pool-size 200,200,200,200,200,200,200,200 \
 --min-count 2 \
---window 10000 \
---step 10000 \
---sitecount truewindows_3L-10000-10000.txt \
+--window 5000 \
+--step 5000 \
+--sitecount /home/audett/scratch/SSD/Analysis/sexesMerged/pi/truewindows_3L-5000-5000.txt \
 --min-sites-frac 0.75 \
---output 3L_D
+--output window_5000_subsample_300_3L
 
-python /2/scratch/TylerA/SSD/scripts/PoolGen_var.py \
---input subsample_3R.sync \
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolGen_var.py \
+--input /home/audett/scratch/SSD/Analysis/sexesMerged/syncs/subsample_3R.sync \
 --pool-size 200,200,200,200,200,200,200,200 \
 --min-count 2 \
---window 10000 \
---step 10000 \
---sitecount truewindows_3R-10000-10000.txt \
+--window 5000 \
+--step 5000 \
+--sitecount /home/audett/scratch/SSD/Analysis/sexesMerged/pi/truewindows_3R-5000-5000.txt \
 --min-sites-frac 0.75 \
---output 3R_D
+--output window_5000_subsample_300_3R
 
-python /2/scratch/TylerA/SSD/scripts/PoolGen_var.py \
---input subsample_4.sync \
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolGen_var.py \
+--input /home/audett/scratch/SSD/Analysis/sexesMerged/syncs/subsample_4.sync \
 --pool-size 200,200,200,200,200,200,200,200 \
 --min-count 2 \
---window 10000 \
---step 10000 \
---sitecount truewindows_4-10000-10000.txt \
+--window 5000 \
+--step 5000 \
+--sitecount /home/audett/scratch/SSD/Analysis/sexesMerged/pi/truewindows_4-5000-5000.txt \
 --min-sites-frac 0.75 \
---output 4_D
+--output window_5000_subsample_300_4
 
-python /2/scratch/TylerA/SSD/scripts/PoolGen_var.py \
---input subsample_X.sync \
+python /home/audett/projects/def-idworkin/audett/SSD/scripts/PoolGen_var.py \
+--input /home/audett/scratch/SSD/Analysis/sexesMerged/syncs/subsample_X.sync \
 --pool-size 200,200,200,200,200,200,200,200 \
 --min-count 2 \
---window 10000 \
---step 10000 \
---sitecount truewindows_X-10000-10000.txt \
+--window 5000 \
+--step 5000 \
+--sitecount /home/audett/scratch/SSD/Analysis/sexesMerged/pi/truewindows_X-5000-5000.txt \
 --min-sites-frac 0.75 \
---output X_D
+--output window_5000_subsample_300_X
 
 ~~~~
 
 
-cat 2L_D_10000_10000.D 2R_D_10000_10000.D 3L_D_10000_10000.D 3R_D_10000_10000.D 4_D_10000_10000.D X_D_10000_10000.D > all.D
+cat *D > all_D.txt
 
-cat 2L_D_10000_10000.pi 2R_D_10000_10000.pi 3L_D_10000_10000.pi 3R_D_10000_10000.pi 4_D_10000_10000.pi X_D_10000_10000.pi > all.pi
+cat *pi > all_pi.txt
 
 ~~~
 ````
@@ -755,10 +755,6 @@ filter(ddat2, chr == "3R") %>%
   geom_point(size=0.5, show.legend = F, alpha=0.25) +
   theme(panel.background = element_blank()) +
   geom_smooth(aes(y=E1), method="auto", col="blue")
-
-
-
-
 
 plot_E2<-ggplot(ddat2,aes(x=number,y=E2,color=chr)) +
   geom_point(size=0.5, show.legend = F, alpha=0.25) +
