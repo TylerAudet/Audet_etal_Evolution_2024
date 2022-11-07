@@ -40,14 +40,15 @@ L2 <- na.omit(L2)
 S1 <- na.omit(S1)
 S2 <- na.omit(S2)
 
-C1 <- C1[C1$C1>quantile(C1$C1, 0.95),]
-C2 <- C2[C2$C2>quantile(C2$C2, 0.95),]
-E1 <- E1[E1$E1>quantile(E1$E1, 0.95),]
-E2 <- E2[E2$E2>quantile(E2$E2, 0.95),]
-L1 <- L1[L1$L1>quantile(L1$L1, 0.95),]
-L2 <- L2[L2$L2>quantile(L2$L2, 0.95),]
-S1 <- S1[S1$S1>quantile(S1$S1, 0.95),]
-S2 <- S2[S2$S2>quantile(S2$S2, 0.95),]
+
+C1 <- C1[C1$C1<quantile(C1$C1, 0.05),]
+C2 <- C2[C2$C2<quantile(C2$C2, 0.05),]
+E1 <- E1[E1$E1<quantile(E1$E1, 0.05),]
+E2 <- E2[E2$E2<quantile(E2$E2, 0.05),]
+L1 <- L1[L1$L1<quantile(L1$L1, 0.05),]
+L2 <- L2[L2$L2<quantile(L2$L2, 0.05),]
+S1 <- S1[S1$S1<quantile(S1$S1, 0.05),]
+S2 <- S2[S2$S2<quantile(S2$S2, 0.05),]
 
 C1<- C1[,c(1,2,4)]
 C2<- C2[,c(1,2,4)]
