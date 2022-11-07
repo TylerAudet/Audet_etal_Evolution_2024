@@ -675,248 +675,42 @@ cat *pi > all_pi.txt
 Now graphing in R and extracting interesting outliers (top and bottom 1%)
 
 ````
-rm(list=ls())
+vcftools --vcf /home/audett/scratch/SSD/Analysis/sexesMerged/SNPcalls/sexesMerged_clean.vcf --bed /home/audett/scratch/SSD/Analysis/regions_of_interest_C1.bed --out /home/audett/scratch/SSD/Analysis/allcriteria_C1 --recode --keep-INFO-all
 
-library(dplyr)
-library(ggplot2)
+vcftools --vcf /home/audett/scratch/SSD/Analysis/sexesMerged/SNPcalls/sexesMerged_clean.vcf --bed /home/audett/scratch/SSD/Analysis/regions_of_interest_C2.bed --out /home/audett/scratch/SSD/Analysis/allcriteria_C2 --recode --keep-INFO-all
 
+vcftools --vcf /home/audett/scratch/SSD/Analysis/sexesMerged/SNPcalls/sexesMerged_clean.vcf --bed /home/audett/scratch/SSD/Analysis/regions_of_interest_E1.bed --out /home/audett/scratch/SSD/Analysis/allcriteria_E1 --recode --keep-INFO-all
 
-D<-read.table("~/Desktop/all.D")
-pi<-read.table("~/Desktop/all.pi")
+vcftools --vcf /home/audett/scratch/SSD/Analysis/sexesMerged/SNPcalls/sexesMerged_clean.vcf --bed /home/audett/scratch/SSD/Analysis/regions_of_interest_E2.bed --out /home/audett/scratch/SSD/Analysis/allcriteria_E2 --recode --keep-INFO-all
 
+vcftools --vcf /home/audett/scratch/SSD/Analysis/sexesMerged/SNPcalls/sexesMerged_clean.vcf --bed /home/audett/scratch/SSD/Analysis/regions_of_interest_L1.bed --out /home/audett/scratch/SSD/Analysis/allcriteria_L1 --recode --keep-INFO-all
 
-ddat2<-D
+vcftools --vcf /home/audett/scratch/SSD/Analysis/sexesMerged/SNPcalls/sexesMerged_clean.vcf --bed /home/audett/scratch/SSD/Analysis/regions_of_interest_L2.bed --out /home/audett/scratch/SSD/Analysis/allcriteria_L2 --recode --keep-INFO-all
 
-headers<-c("chr","pos","C1","C2","E1","E2","L1","L2","S1","S2")
+vcftools --vcf /home/audett/scratch/SSD/Analysis/sexesMerged/SNPcalls/sexesMerged_clean.vcf --bed /home/audett/scratch/SSD/Analysis/regions_of_interest_S1.bed --out /home/audett/scratch/SSD/Analysis/allcriteria_S1 --recode --keep-INFO-all
 
-colnames(ddat2)<-headers
-
-# Convert na in column D to 0
-
-ddat2 <- data.frame(lapply(ddat2, function(x) {
-  gsub("na", "0", x)
-}))
-
-ddat22L <- ddat2[which(ddat2$chr=='2L'),]
-ddat22R <- ddat2[which(ddat2$chr=='2R'),]
-ddat23L <- ddat2[which(ddat2$chr=='3L'),]
-ddat23R <- ddat2[which(ddat2$chr=='3R'),]
-ddat24 <- ddat2[which(ddat2$chr=='4'),]
-ddat2X <- ddat2[which(ddat2$chr=='X'),]
-ddat2 <- rbind(ddat2X, ddat22L, ddat22R, ddat23L, ddat23R, ddat24)
+vcftools --vcf /home/audett/scratch/SSD/Analysis/sexesMerged/SNPcalls/sexesMerged_clean.vcf --bed /home/audett/scratch/SSD/Analysis/regions_of_interest_S2.bed --out /home/audett/scratch/SSD/Analysis/allcriteria_S2 --recode --keep-INFO-all
 
 
-g <- nrow(ddat2[which(ddat2$chr=='2L'),])
-h <- nrow(ddat2[which(ddat2$chr=='2R'),])
-i <- nrow(ddat2[which(ddat2$chr=='3L'),])
-j <- nrow(ddat2[which(ddat2$chr=='3R'),])
-k <- nrow(ddat2[which(ddat2$chr=='4'),])
-l <- nrow(ddat2[which(ddat2$chr=='X'),])
 
-ddat2$number <-  c((1:l),
-                   (l+1):(l+g), 
-                   (l+g+1):(l+g+h), 
-                   (l+g+h+1):(l+g+h+i),
-                   (l+g+h+i+1):(l+g+h+i+j),
-                   (l+g+h+i+j+1):(l+g+h+i+j+k))
-
-ddat2$E1<-as.numeric(ddat2$E1)
-ddat2$E2<-as.numeric(ddat2$E2)
-ddat2$C1<-as.numeric(ddat2$C1)
-ddat2$C2<-as.numeric(ddat2$C2)
-ddat2$L1<-as.numeric(ddat2$L1)
-ddat2$L2<-as.numeric(ddat2$L2)
-ddat2$S1<-as.numeric(ddat2$S1)
-ddat2$S2<-as.numeric(ddat2$S2)
+grep -v 'NO_VARIATION\|intron_variant'  /home/audett/scratch/SSD/Analysis/C1_annotated.txt > /home/audett/scratch/SSD/Analysis/C1_interesting.txt
+grep -v 'NO_VARIATION\|intron_variant'  /home/audett/scratch/SSD/Analysis/C2_annotated.txt > /home/audett/scratch/SSD/Analysis/C2_interesting.txt
+grep -v 'NO_VARIATION\|intron_variant'  /home/audett/scratch/SSD/Analysis/E1_annotated.txt > /home/audett/scratch/SSD/Analysis/E1_interesting.txt
+grep -v 'NO_VARIATION\|intron_variant'  /home/audett/scratch/SSD/Analysis/E2_annotated.txt > /home/audett/scratch/SSD/Analysis/E2_interesting.txt
+grep -v 'NO_VARIATION\|intron_variant'  /home/audett/scratch/SSD/Analysis/L1_annotated.txt > /home/audett/scratch/SSD/Analysis/L1_interesting.txt
+grep -v 'NO_VARIATION\|intron_variant'  /home/audett/scratch/SSD/Analysis/L2_annotated.txt > /home/audett/scratch/SSD/Analysis/L2_interesting.txt
+grep -v 'NO_VARIATION\|intron_variant'  /home/audett/scratch/SSD/Analysis/S1_annotated.txt > /home/audett/scratch/SSD/Analysis/S1_interesting.txt
+grep -v 'NO_VARIATION\|intron_variant'  /home/audett/scratch/SSD/Analysis/S2_annotated.txt > /home/audett/scratch/SSD/Analysis/S2_interesting.txt
 
 
-#filter(ddat2, chr == "2L") %>%
-
-  ggplot(ddat2, aes(x=number,y=E1)) +
-  geom_point(size=0.5, show.legend = F, alpha=0.25) +
-  facet_grid(vars(chr)) +
-  theme(panel.background = element_blank()) +
-  geom_smooth(aes(y=E1), method="auto", col="blue")
-
-filter(ddat2, chr == "2R") %>%
-  ggplot(aes(x=number,y=E1)) +
-  geom_point(size=0.5, show.legend = F, alpha=0.25) +
-  theme(panel.background = element_blank()) +
-  geom_smooth(aes(y=E1), method="auto", col="blue")
-
-filter(ddat2, chr == "3L") %>%
-  ggplot(aes(x=number,y=E1)) +
-  geom_point(size=0.5, show.legend = F, alpha=0.25) +
-  theme(panel.background = element_blank()) +
-  geom_smooth(aes(y=E1), method="auto", col="blue")
-
-filter(ddat2, chr == "3R") %>%
-  ggplot(aes(x=number,y=E1)) +
-  geom_point(size=0.5, show.legend = F, alpha=0.25) +
-  theme(panel.background = element_blank()) +
-  geom_smooth(aes(y=E1), method="auto", col="blue")
-
-plot_E2<-ggplot(ddat2,aes(x=number,y=E2,color=chr)) +
-  geom_point(size=0.5, show.legend = F, alpha=0.25) +
-  scale_colour_manual(values=c("seagreen", "darkslateblue", 'darkred', 'darkorchid4', 'darkolivegreen', 'darkblue')) +
-  theme(panel.background = element_blank()) +
-  geom_smooth(aes(y=E2), method="auto", col="blue")
-
-plot_C1<-ggplot(ddat2,aes(x=number,y=C1,color=chr)) +
-  geom_point(size=0.5, show.legend = F, alpha=0.25) +
-  theme(panel.background = element_blank()) +
-  geom_smooth(aes(y=C1), method="auto", col="blue")
-
-plot_C2<-ggplot(ddat2,aes(x=number,y=C2,color=chr)) +
-  geom_point(size=0.5, show.legend = F, alpha=0.25) +
-  theme(panel.background = element_blank()) +
-  geom_smooth(aes(y=C2), method="auto", col="blue")
-
-plot_L1<-ggplot(ddat2,aes(x=number,y=L1,color=chr)) +
-  geom_point(size=0.5, show.legend = F, alpha=0.25) +
-  theme(panel.background = element_blank()) +
-  geom_smooth(aes(y=L1), method="auto", col="blue")
-
-plot_L2<-ggplot(ddat2,aes(x=number,y=L2,color=chr)) +
-  geom_point(size=0.5, show.legend = F, alpha=0.25) +
-  theme(panel.background = element_blank()) +
-  geom_smooth(aes(y=L2), method="auto", col="blue")
-
-plot_S1<-ggplot(ddat2,aes(x=number,y=S1,color=chr)) +
-  geom_point(size=0.5, show.legend = F, alpha=0.25) +
-  theme(panel.background = element_blank()) +
-  geom_smooth(aes(y=S1), method="auto", col="blue")
-
-plot_S2<-ggplot(ddat2,aes(x=number,y=S2,color=chr)) +
-  geom_point(size=0.5, show.legend = F, alpha=0.25) +
-  theme(panel.background = element_blank()) +
-  geom_smooth(aes(y=S2), method="auto", col="blue")
-
-##
 
 
-with(ddat2, tapply(E1, chr,
-                   quantile, probs = c(0, 0.001, 0.01, 0.1, 0.5, 0.9, 0.99, 0.999, 1),
-                   na.rm = TRUE))
-
-# 1% for E1
-#2l: -2.589, 5.147
-#2R: -2.419, 5.021
-#3L: -2.724, 4.723
-#3R: -2.266, 4.96
-#4: -1.93, 1.307
-#X: -2.135, 4.016
+awk '{print $8}' /home/audett/scratch/SSD/Analysis/top5fst_bottom1CMH_interesting.txt | awk -F '[\|]' '{if (NR>20) print $4}' | 
+awk '{ a[$1]++ } END { for (b in a) { print b } }' > genes_highfst_lowcmh.txt
 
 
-with(ddat2, tapply(E2, chr,
-                   quantile, probs = c(0, 0.001, 0.01, 0.1, 0.5, 0.9, 0.99, 0.999, 1),
-                   na.rm = TRUE))
-
-# 1 for E2
-#2L: -2.68, 5.12
-#2R: -2.525, 4.91 
-#3L: -2.45, 5.03
-#3R: -2.46, 4.98
-#4: -1.86, 0.76
-#X: -2.46, 4.31
 
 
-### Make bed files for D
-
-library(dplyr)
-
-
-E1_D <- data.frame(D[c(1,2,5)])
-E2_D <- data.frame(D[c(1,2,6)])
-
-E1_D$V1 <- sub("^", "chr", E1_D$V1)
-E2_D$V1 <- sub("^", "chr", E2_D$V1)
-
-E1_D$V2<-as.numeric(E1_D$V2)
-E2_D$V2<-as.numeric(E2_D$V2)
-
-E1_D$start<-E1_D$V2-10000
-E1_D$end<-E1_D$V2+10000
-
-E2_D$start<-E2_D$V2-10000
-E2_D$end<-E2_D$V2+10000
-
-E1_D_2L <- filter(E1_D, V1 == "chr2L") %>%
-  filter(V5 <= -2.589 | V5 >=  5.147)
-
-E1_D_2R <- filter(E1_D, V1 == "chr2R") %>%
-  filter(V5 <= -2.419 | V5 >=  5.021)
-
-E1_D_3L <- filter(E1_D, V1 == "chr3L") %>%
-  filter(V5 <= -2.724 | V5 >=  4.723)
-
-E1_D_3R <- filter(E1_D, V1 == "chr3R") %>%
-  filter(V5 <= -2.266 | V5 >=  4.96)
-
-E1_D_4 <- filter(E1_D, V1 == "chr4") %>%
-  filter(V5 <= -1.93 | V5 >=  1.307)
-
-E1_D_X <- filter(E1_D, V1 == "chrX") %>%
-  filter(V5 <= -2.135 | V5 >=  4.016)
-
-# 1% for E1
-#2l: -2.589, 5.147
-#2R: -2.419, 5.021
-#3L: -2.724, 4.723
-#3R: -2.266, 4.96
-#4: -1.93, 1.307
-#X: -2.135, 4.016
-
-E2_D_2L <- filter(E2_D, V1 == "chr2L") %>%
-  filter(V6 <= -2.68 | V6 >= 5.12)
-
-E2_D_2R <- filter(E2_D, V1 == "chr2R") %>%
-  filter(V6 <= -2.53 | V6 >= 4.91)
-
-E2_D_3L <- filter(E2_D, V1 == "chr3L") %>%
-  filter(V6 <= -2.45 | V6 >= 5.03)
-
-E2_D_3R <- filter(E2_D, V1 == "chr3R") %>%
-  filter(V6 <= -2.46 | V6 >= 4.98)
-
-E2_D_4 <- filter(E2_D, V1 == "chr4") %>%
-  filter(V6 <= -1.86 | V6 >= 0.76)
-
-E2_D_X <- filter(E2_D, V1 == "chrX") %>%
-  filter(V6 <= -2.46 | V6 >= 4.31)
-
-# 1 for E2
-#2L: -2.68, 5.12
-#2R: -2.525, 4.91 
-#3L: -2.45, 5.03
-#3R: -2.46, 4.98
-#4: -1.86, 0.76
-#X: -2.46, 4.31
-
-E1_D_2L <- E1_D_2L[,c(1,4,5)]
-E1_D_2R <- E1_D_2R[,c(1,4,5)]
-E1_D_3L <- E1_D_3L[,c(1,4,5)]
-E1_D_3R <- E1_D_3R[,c(1,4,5)]
-E1_D_4 <- E1_D_4[,c(1,4,5)]
-E1_D_X <- E1_D_X[,c(1,4,5)]
-
-E2_D_2L <- E2_D_2L[,c(1,4,5)]
-E2_D_2R <- E2_D_2R[,c(1,4,5)]
-E2_D_3L <- E2_D_3L[,c(1,4,5)]
-E2_D_3R <- E2_D_3R[,c(1,4,5)]
-E2_D_4 <- E2_D_4[,c(1,4,5)]
-E2_D_X <- E2_D_X[,c(1,4,5)]
-
-E1_D_final <- rbind(E1_D_2L, E1_D_2R, E1_D_3L, E1_D_3R, E1_D_4, E1_D_X)
-E2_D_final <- rbind(E2_D_2L, E2_D_2R, E2_D_3L, E2_D_3R, E2_D_4, E2_D_X)
-
-
-headers<-c("chrom","chromStart","chromEnd")
-colnames(E1_D_final)<-headers
-colnames(E2_D_final)<-headers
-
-write.table(E1_D_final,file="~/Desktop/E1_D.bed",sep='\t',col.names=FALSE,row.names=FALSE,quote=FALSE)
-write.table(E2_D_final,file="~/Desktop/E2_D.bed",sep='\t',col.names=FALSE,row.names=FALSE,quote=FALSE)
 
 ````
 
