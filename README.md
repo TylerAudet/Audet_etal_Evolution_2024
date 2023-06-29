@@ -165,8 +165,18 @@ python /scripts/VCF2sync.py \
 ````
 ## Calculate Fst
 
+using grenedalf from the mpileups
+
+### Seperate Fst out by sample
+
+order: 1.2,1.3,1.4,1.5,1.6,1.7,1.8,2.3,2.4,2.5,2.6,2.7,2.8,3.4,3.5,3.6,3.7,3.8,4.5,4.6,4.7,4.8,5.6,5.7,5.8,6.7,6.8,7.8
+        C1C2,C1E1,C1E2,C1L1,C1L2,C1S1,C1S2,C2E1,C2E2,C2L1,C2L2,C2S1,C2S2,E1E2,E1L1,E1L2,E1S1,E1S2,L1L2,L1S1,L1S2,S1S2
+
+awk -F "," '{print $1, $2, $3, $6}' sexesMerged_fst.csv > C1E1.fst
+
 ## Calculate CMH
 
+using ACER in R
 
 # Comparing areas with high Fst and statistically significant CMH values
 
