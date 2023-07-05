@@ -108,18 +108,17 @@ perl /popoolation_1.2.2/basic-pipeline/filter-pileup-by-gtf.pl \
 --input in.mpileup \
 --output out.mpileup
 ```
-# 9) Identify indels using popoolation 2 v. 1.2 and remove them using popoolation v 1.2 
+# 9) Identify indels using Kapun scripts and remove them using popoolation v 1.2
 ```
-perl /path/to/popoolation2_1201/indel_filtering/identify-indel-regions.pl \
---input in.mpileup \
---output out.gtf \
---indel-window 10
+Kapun_IDindels.sh
+
 ```
 ```
 perl /path/to/popoolation_1.2.2/basic-pipeline/filter-pileup-by-gtf.pl \
 --gtf in.gtf \
 --input in.mpileup \
 --output out_noindel.mpileup
+
 ```
 
 # 10) SNP calling was performed using poolSNP v. 1
@@ -163,16 +162,34 @@ python /scripts/VCF2sync.py \
 > /chrom.sync
 
 ````
-## Calculate Fst
+## Calculate Fst from sync with all sexes and replicates merged (so just treatment)
 
-using grenedalf from the mpileups
+```
+#!/bin/bash
+#SBATCH -t 3:00:00
+#SBATCH -A def-idworkin
+#SBATCH --mem=10G
+#SBATCH --cpus-per-task 32
+#SBATCH --mail-user=audett@mcmaster.ca
+#SBATCH --mail-type=BEGIN
+#SBATCH --mail-type=END
+#SBATCH --mail-type=FAIL
 
-### Seperate Fst out by sample
+/home/audett/projects/def-idworkin/audett/SSD/scripts/grenedalf/bin/grenedalf fst \
+--window-type sliding \
+--window-sliding-width 10000 \
+--method unbiased-nei \
+--pool-sizes 400 \
+--threads 32 \
+--sync-path /home/audett/scratch/SSD/Analysis/repsMerged/syncs/repsMerged.sync \
+--sample-name-list C,E,L,S \
+--omit-na-windows \
+--out-dir /home/audett/scratch/SSD/Analysis/repsMerged/syncs/ \
+--file-prefix repsMerged
 
-order: 1.2,1.3,1.4,1.5,1.6,1.7,1.8,2.3,2.4,2.5,2.6,2.7,2.8,3.4,3.5,3.6,3.7,3.8,4.5,4.6,4.7,4.8,5.6,5.7,5.8,6.7,6.8,7.8
-        C1C2,C1E1,C1E2,C1L1,C1L2,C1S1,C1S2,C2E1,C2E2,C2L1,C2L2,C2S1,C2S2,E1E2,E1L1,E1L2,E1S1,E1S2,L1L2,L1S1,L1S2,S1S2
+```
 
-awk -F "," '{print $1, $2, $3, $6}' sexesMerged_fst.csv > C1E1.fst
+## 
 
 
 
