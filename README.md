@@ -189,6 +189,34 @@ python /scripts/VCF2sync.py \
 
 ```
 
+# and for between sex Fst
+
+```
+#!/bin/bash
+#SBATCH -t 3:00:00
+#SBATCH -A def-idworkin
+#SBATCH --mem=10G
+#SBATCH --cpus-per-task 16
+#SBATCH --mail-user=audett@mcmaster.ca
+#SBATCH --mail-type=BEGIN
+#SBATCH --mail-type=END
+#SBATCH --mail-type=FAIL
+
+/home/audett/projects/def-idworkin/audett/SSD/scripts/grenedalf/bin/grenedalf fst \
+--window-type sliding \
+--window-sliding-width 1000 \
+--method unbiased-nei \
+--pool-sizes 100 \
+--threads 16 \
+--sync-path /home/audett/scratch/SSD/Stewart/Stewart_withIndels.sync \
+--sample-name-list C1F,C1M,C2F,C2M,E1F,E1M,E2F,E2M,L1F,L1M,L2F,L2M,S1F,S1M,S2F,S2M \
+--omit-na-windows \
+--out-dir /home/audett/scratch/SSD/Stewart/ \
+--file-prefix sexFst
+
+```
+
+
 ## 
 
 
