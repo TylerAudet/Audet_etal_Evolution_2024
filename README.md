@@ -85,7 +85,7 @@ samtools mpileup -Q 20 -q 20 -d 300 \
 in.bam \
 -o out.mpileup
 ```
-mpileup files were created for 1) treatments where sexes were combined 2) treatments where sexes were kept seperately 3) 8 individual bam files created by merging all sequences together and randomly sampling to creat 8 'null' populations.
+mpileup files were created for 1) treatments where sexes were combined 2) treatments where sexes were kept seperately 3) replicates and sexes combined
 
 # 8) Repeteive regions were removed using popoolation v. 1.2.2.
 These regions were the known transposable elements in the reference genome version 6.23, other "blacklisted" regions that have been shown to cause issues in SNP calling in the drosophila genome (Amemiya et al. 2019; https://github.com/Boyle-Lab/Blacklist/blob/master/lists/dm6-blacklist.v2.bed.gz), and a created bedfile to isolate regions that show suspiciously high inter-sex Fst and were verified to be transposable or repetative elements.
@@ -118,7 +118,6 @@ perl /path/to/popoolation_1.2.2/basic-pipeline/filter-pileup-by-gtf.pl \
 --gtf in.gtf \
 --input in.mpileup \
 --output out_noindel.mpileup
-
 ```
 
 # 10) SNP calling was performed using poolSNP v. 1
@@ -250,7 +249,7 @@ awk '{ a[$1]++ } END { for (b in a) { print b } }' > genes_highfst_lowcmh.txt
 
 ````
 
-
+# This is old stuff
 # Calculataing Tajima's D
 
 
