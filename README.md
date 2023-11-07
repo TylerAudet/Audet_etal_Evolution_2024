@@ -108,16 +108,10 @@ perl /popoolation_1.2.2/basic-pipeline/filter-pileup-by-gtf.pl \
 --input in.mpileup \
 --output out.mpileup
 ```
-# 9) Identify indels using Kapun scripts and remove them using popoolation v 1.2
+# 9) Identify indels using Kapun scripts
 ```
 Kapun_IDindels.sh
 
-```
-```
-perl /path/to/popoolation_1.2.2/basic-pipeline/filter-pileup-by-gtf.pl \
---gtf in.gtf \
---input in.mpileup \
---output out_noindel.mpileup
 ```
 
 # 10) SNP calling was performed using poolSNP v. 1
@@ -141,11 +135,15 @@ BS=1 \
 output=out.vcf
 ```
 
-# 11) This VCF was filtered for the ENCODE blacklist using bedtools v. 2.3
+# 11) This VCF was filtered for the ENCODE blacklist using bedtools v. 2.3, and also had the previously identified Indels removed with customs scripts from Kapun et al.
 ```
 bedtools intersect -v -a in.vcf \
 -b /blacklist/dm6-blacklist.v2.bed \
 > out.vcf
+```
+
+```
+Kapun_filterindels.sh
 ```
 
 
