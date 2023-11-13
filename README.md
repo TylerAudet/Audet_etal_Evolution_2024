@@ -113,6 +113,7 @@ perl /popoolation_1.2.2/basic-pipeline/filter-pileup-by-gtf.pl \
 Kapun_IDindels.sh
 
 ```
+A sync file is created from this mpileup that contains allele frequencies at all positions using `grenedalf sync`
 
 # 10) SNP calling was performed using poolSNP v. 1
 
@@ -146,19 +147,14 @@ bedtools intersect -v -a in.vcf \
 Kapun_filterindels.sh
 ```
 
+## Using custom scripts we subset the all positions sync file with out SNP called clean vcf
 
+```
+subset_syncByVCF.sh
+```
 
-## Make sync files from the SNP calls
-Script borrowed from Martin Kapun
+This is due to inconsistent vcf formatting output by `poolSNP` and not consistent with what `grenedalf fst` requires. This SNP called sync file is used for Fst, diversity measures, and models
 
-
-````
-
-python /scripts/VCF2sync.py \
---vcf /chrom.vcf \
-> /chrom.sync
-
-````
 ## Calculate Fst from sync with all sexes and replicates merged (so just treatment)
 
 ```
