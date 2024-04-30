@@ -158,17 +158,7 @@ This is due to inconsistent vcf formatting output by `poolSNP` and not consisten
 ## Calculate Fst from sync with all sexes and replicates merged (so just treatment)
 
 ```
-#!/bin/bash
-#SBATCH -t 3:00:00
-#SBATCH -A def-idworkin
-#SBATCH --mem=10G
-#SBATCH --cpus-per-task 32
-#SBATCH --mail-user=audett@mcmaster.ca
-#SBATCH --mail-type=BEGIN
-#SBATCH --mail-type=END
-#SBATCH --mail-type=FAIL
-
-/home/audett/projects/def-idworkin/audett/SSD/scripts/grenedalf/bin/grenedalf fst \
+/path/to/grenedalf/bin/grenedalf fst \
 --window-type sliding \
 --window-sliding-width 10000 \
 --method unbiased-nei \
@@ -185,19 +175,9 @@ This is due to inconsistent vcf formatting output by `poolSNP` and not consisten
 # and for between sex Fst
 
 ```
-#!/bin/bash
-#SBATCH -t 3:00:00
-#SBATCH -A def-idworkin
-#SBATCH --mem=10G
-#SBATCH --cpus-per-task 16
-#SBATCH --mail-user=audett@mcmaster.ca
-#SBATCH --mail-type=BEGIN
-#SBATCH --mail-type=END
-#SBATCH --mail-type=FAIL
-
-/home/audett/projects/def-idworkin/audett/SSD/scripts/grenedalf/bin/grenedalf fst \
+/path/to/grenedalf/bin/grenedalf fst \
 --window-type sliding \
---window-sliding-width 1000 \
+--window-sliding-width 5000 \
 --method unbiased-nei \
 --pool-sizes 100 \
 --threads 16 \
@@ -208,19 +188,7 @@ This is due to inconsistent vcf formatting output by `poolSNP` and not consisten
 --file-prefix sexFst
 
 ```
-
-
-## 
-
-
-
-## Calculate CMH
-
-using ACER in R
-
-# Comparing areas with high Fst and statistically significant CMH values
-
-Now I want to look for overlap in these bed files
+look for overlap in these bed files
 
 ````
 bedtools intersect -header -u -a SNPs.vcf -b ./top5percent_fst.bed ./significant_CMH.bed low_pi.bed > ./sites_of_interest.bed
