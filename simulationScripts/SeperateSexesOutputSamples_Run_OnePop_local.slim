@@ -1,0 +1,81 @@
+// To simulate allele frequencies of males and females from within the same population and generation
+// based on the Stewart Lineages
+// written for SLiM v4.1
+
+// for burn-in for genetic diversity. To speed it up, rescale.
+// See page 142, section 5.5 on rescaling mu and N
+// see page 145 to rescale r appropriately (in this case just the scalar component)
+// r_scaled <- function(r = 10e-8, n = 10) {0.5 * (1 - (1 - 2*r )^n)} # in R, n is rescaling factor
+
+
+// D. mel genome stuff
+// https://flybase.org/docs/releasenotes.tx
+
+// Then return mutation rate and r to normal, and put N to the appropriate amount.
+
+// per-site, Mutation rate estimates for Drosophila
+//  2.8 × 10−9 (95% confidence interval = 1.0 × 10−9 − 6.1 × 10−9)
+// https://academic.oup.com/genetics/article/196/1/313/5935607
+
+// 3.5 × 10−9 https://genome.cshlp.org/content/19/7/1195
+
+// European 1.67 × 10−9 site−1 gen−1 vs. African 4.86 × 10−9 site−1 gen−1
+// https://genome.cshlp.org/content/33/4/587
+// Note for future use. This also has TE transposition rates
+// 8.99 × 10−5 copy−1 gen−1 vs. 23.36 × 10−5 copy−1 gen−1 for TE
+
+// Current Ne for N. American (Ithaca) pop'n 5.54 x 10^5
+/// https://academic.oup.com/gbe/article/11/3/844/5304659
+
+initialize() {
+	initializeMutationRate(rates = 3.2e-9); // average of the estimates from the papers above
+	initializeMutationType("m1", dominanceCoeff = 0.5, distributionType = "f", 0.0); //neutral
+	initializeGenomicElementType("g1", m1, 1.0);
+	initializeGenomicElement(g1, 0, 24600000); // currently 3L
+	initializeSex("A"); //autosomal chromosome arm
+	
+	// read Drosophila 3L map from Comeron et al. 2012, smoothed by D. Petrov
+	map = readCSV("~/Dropbox/SLiM/DrosophilaEmpiricalParameters/ComeronRecombinationRates_PetrovLab/Comeron_tables/Comeron_100kb_chr3L.txt", c("ends", "rates"), sep="\t");
+	
+	ends = map.getValue("ends");
+	
+	ends = c(ends[1:(size(ends)-1)] - 2, 24600000);
+	
+	rates = map.getValue("rates") * 1e-8; //   1e-8 .. cM per MB
+	
+	initializeRecombinationRate(rates, ends, sex = "F"); // recombination rates in D.mel Females
+	initializeRecombinationRate(0, sex = "M");    // males have no recombination in D.mel
+}
+
+
+// set community.tick and sim.cycle so we are starting at generation 1
+
+1 early() { sim.readFromPopulationFile("./burnin_individuals.out"); 
+            //sim.readFromPopulationFile("./burnin_individuals_test.out"); 
+            community.tick = 1;
+            sim.cycle = 1;} // initial population to generate genetic diversity along chromosome arm.
+        
+
+// Now to capture dynamics of LHM population, with 1792 adults for the 350 generations prior to initiation of selection
+
+2 early() { p1.setSubpopulationSize(1792); } // beginning of LHM, prior to the selection experiment
+
+
+// Now to the Stewart lineages, per se
+// Average 1800 adult individuals per population prior to sieve selection. Not included in current simulation
+// 320 individuals per population each generation used for mating. 
+
+360 early() { p1.setSubpopulationSize(320); } // assuming just drift, no selection
+
+737 late() { p1.outputSample(200, replace = F, requestedSex = "M", filePath = "./trialY_M.txt"); // outputs haploid genomes not diploid individual
+             	 p1.outputSample(200, replace = F, requestedSex = "F",  filePath = "./trialY_F.txt");}
+	
+	
+// outputVCFSample does	diploid genomes, so value should be 100.
+//10717 late() { outputVCFSample(100, replace = F, requestedSex = "M", filePath = "./trial15_M.vcf" ); 
+// outputVCFSample(100, replace = F, requestedSex = "F",  filePath = "./trial_F.vcf");}
+
+//10717 late() { sim.simulationFinished(); }
+
+
+//page 543, read in vcf
