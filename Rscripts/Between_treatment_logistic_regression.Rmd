@@ -1,0 +1,113 @@
+---
+title: "Between_treatment_logistic_regression"
+author: "Tyler Audet"
+date: "2024-04-30"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This is an example of the script used for the linear regression between treatment group allele frequencies. This was run on a remote computer for each treatment-treatment comparison separately.
+
+The csv that is read in is not provided but is outputted from grenedalf frequency table containing minor and major allele frequencies for each treatment.
+
+```{r}
+library(data.table)
+library(tidyverse)
+library(emmeans)
+
+#lngth<-system("wc -l ./majAllele_sample.csv") # figure out length, so you can put in the row number
+
+
+majAllele <- fread("../data/subsettedfrequency.csv")
+
+header <- c("chrom", "pos", "common", "alt",
+            "C1_maj", "C1_min","C2_maj", 
+            "C2_min","E1_maj", "E1_min",
+            "E2_maj", "E2_min","L1_maj",
+            "L1_min","L2_maj", "L2_min",
+            "S1_maj", "S1_min","S2_maj",
+            "S2_min")
+
+colnames(majAllele) <- header
+
+test <- as.data.frame(pivot_longer(majAllele, 
+                                   cols = C1_maj:S2_min, 
+                                   names_to = "treatment"))
+
+test2 <- separate(test, col = treatment, sep = "_", into = c("lineage", "allele"))
+test3 <- as.data.frame(pivot_wider(test2, names_from = allele, values_from = value))
+test4 <- separate(test3[,c(1,2,5,6,7)], col = lineage, sep = "", into = c("blank", "treatment","replicate"))
+
+test4$pos <- as.factor(test4$pos)
+
+out <- matrix(nrow = length(unique(test4$pos))*3, ncol = 7)
+out2 <- matrix(nrow = length(unique(test4$pos))*4, ncol = 6)
+
+x <- 1
+y <- 1
+count <- 1
+
+for(i in unique(test4$pos)) {
+  
+  count <- count + 1
+  if (count%%1000 == 0){
+    print(count)
+    print(Sys.time())
+  }
+  
+  pos <- i
+  data <- test4[(test4$pos == i),]
+  mod1 <- glm(cbind(maj,min) ~ treatment, 
+              data = data, family = binomial(link = "logit"))
+  
+  mod_emm <- emmeans(mod1, ~treatment, type = "response")
+  mod_emm_df <- as.data.frame(as.data.frame(mod_emm))
+  num_mod_emm_df <- mod_emm_df[,2:6]
+  
+  control_vs_discordant = c(1, -1, 0, 0)
+  small_vs_large = c(0, 0, 1, -1)
+  discordant_vs_other = c(1/3, -1, 1/3, 1/3)
+  
+  contrast_out <- contrast(mod_emm,
+                           list(control_vs_discordant = control_vs_discordant,
+                                discordant_vs_other = discordant_vs_other,
+                                small_vs_large = small_vs_large))
+  
+  conf <- confint(contrast_out)
+  pval <- as.data.frame(contrast_out)
+  
+  
+  contrast_final <- as.matrix(cbind(pos=i,conf[,-1],pval=pval$p.value))
+  
+  out[x,] <- contrast_final[1,]
+  out[x+1,] <- contrast_final[2,]
+  out[x+2,] <- contrast_final[3,]
+  
+  out2[y,] <- as.matrix(cbind(pos=i,num_mod_emm_df[1,]))
+  out2[y+1,] <- as.matrix(cbind(pos=i,num_mod_emm_df[2,]))
+  out2[y+2,] <- as.matrix(cbind(pos=i,num_mod_emm_df[3,]))
+  out2[y+3,] <- as.matrix(cbind(pos=i,num_mod_emm_df[4,]))
+  
+  x <- x+3
+  y <- y+4
+}
+
+
+temp <- cbind(c("control_vs_discordant",
+        "discordant_vs_other",
+        "small_vs_large"), 
+      as.data.frame(out))
+
+temp2 <- cbind(c("C","E","L","S"),as.data.frame(out2))
+
+colnames(temp) <- c("contrast","pos","odds.ratio","SE","df","UCL","LCL","pval")
+colnames(temp2) <- c("Treatment","pos","prob","SE","df","LCL","UCL")
+
+fwrite(temp, "../contrast_model.txt", quote = FALSE, row.names = FALSE, col.names = TRUE, sep = "\t")
+fwrite(temp2, "../emmeans_model.txt", quote = FALSE, row.names = FALSE, col.names = TRUE, sep = "\t")
+
+```
+

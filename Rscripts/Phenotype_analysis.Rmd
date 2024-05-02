@@ -1,0 +1,1285 @@
+---
+title: "JK_TA_SSD_Evolution_2024_ID"
+author: "Ian Dworkin"
+date: "`r format(Sys.time(),'%d %b %Y')`"
+output: 
+  html_document: 
+    keep_md: yes
+    number_sections: yes
+    toc: yes
+editor_options: 
+  chunk_output_type: console
+---
+
+# Analysis of the Stewart lineages SSD
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(digits = 3, show.signif.stars = FALSE, show.coef.Pvalues = TRUE)
+```
+
+## Background
+
+ This script contains the code to replicate the plotting and analysis for the morphological traits. It also contains some analyses that we performed as double checks of our main analyses.
+ 
+## Load libraries
+```{r}
+require(tidyverse)
+require(ggplot2)
+library(cowplot)
+require(ggbeeswarm)
+library(ggfortify)
+library(ggmatplot)
+library(ggridges)
+require(lme4)
+require(blme)
+require(glmmTMB)
+require(car)
+require(emmeans)
+require(predictmeans)
+require(pbkrtest)
+library(grid)
+library(gridExtra)
+```
+
+
+### for comparison of the VCV among selection treatments
+```{r}
+library(vcvComp)
+library(evolqg)
+library(MCMCglmm)
+```
+
+
+
+## load data and do quality checks
+
+```{r}
+size_dat <- read.csv("../data/JK_Feb2020_legsThorax_SSD.csv", h = T,
+                     stringsAsFactors = FALSE)
+
+str(size_dat)
+
+head(size_dat)
+```
+
+
+
+```{r}
+with(size_dat, table(generation)) # making sure only one generation is reported
+with(size_dat, table(sex))
+with(size_dat, table(replicate))
+with(size_dat, table(repeat_measure))
+
+```
+
+
+### check the class of some objects so they are what we need for analysis (i.e. factors instead of integers)
+
+sex, selection, replicate, sampling, trait, individual_ID and repeat_measure should all be factors.
+
+```{r}
+str(size_dat)
+names(size_dat)
+
+# use lapply to convert strings to factors where we need them
+size_dat[, c(4:9,11)] <- lapply(size_dat[, c(4:9,11)], factor)
+
+str(size_dat) # check that it behaves as expected
+levels(size_dat$selection)
+
+size_dat$selection <- relevel(size_dat$selection, "C")
+
+levels(size_dat$selection) <- c("Control", "Discordant", "Large", "Small")
+levels(size_dat$selection)
+
+levels(size_dat$trait)
+
+levels(size_dat$trait) <- c("femur", "tarsus", "tibia", "thorax")
+
+
+head(size_dat$trait)
+
+levels(size_dat$trait)
+
+#re-organize levels, so that when plotting, they make more sense.
+# Always good to check it is doing it sensibly
+
+with(size_dat,
+     tapply(length, trait, mean))
+
+size_dat$trait <- factor(size_dat$trait, 
+                         levels = c("thorax", "femur", "tibia", "tarsus"))
+
+with(size_dat,
+     tapply(length, trait, mean))
+
+levels(size_dat$trait)
+head(size_dat$trait)
+
+# identifier for each individual
+size_dat$unique_id <- with(size_dat, 
+                           interaction(selection, replicate, sampling, sex, individual_id, drop = TRUE))
+
+str(size_dat)
+```
+
+### Now check some basic data characteristics
+
+Let's make sure we don't have any really obvious outliers (like something 10 times too big or ten times too small). Also make sure mean and median are pretty close.
+
+```{r}
+with(size_dat,
+     tapply(length, trait, quantile, 
+            probs = c(0,0.005, 0.02, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95,0.98,0.99, 1)))
+
+with(size_dat,
+     tapply(length, trait, mean))
+```
+
+It looks like at least one measure of the femur may be off (100 times too small)
+
+```{r}
+size_dat[size_dat$length < 0.1,]
+```
+
+
+it is individual "JK_350_M_S_1_S_L-F_7". Until this image has been checked (JK?), we will just remove it.
+
+```{r}
+size_dat <- size_dat[size_dat$image_name != "JK_350_M_S_1_S_L-F_7",] # remove this one line. 
+
+dim(size_dat)
+```
+
+
+We could also just look at min and max for each as a check.
+```{r}
+with(size_dat, 
+     tapply(length, trait, range))
+```
+
+
+### Data transformation
+
+Since we are working with morphological data with a fair bit of size variation, it is often suggested that we use a log transformation to help make the scale of variation more comparable. This is not always necessary, but in this instance it may be helpful, in particular so our interactions are meaningful with respect to proportional effects. We will use a log2 (log base 2) transformation. 
+
+We won't get rid of the linear measure, just add a new column to check.
+I am also first converting the measurement from mm to micrometres so that the values are positive (i.e. just multiplying by 1000). HOWEVER I am leaving the original values in mm.
+
+```{r}
+size_dat$log2_length <- log(1000*size_dat$length, base = 2)
+```
+
+### graphical summaries of the raw data
+
+I am providing a few different ways of plotting this. You can choose which you think is best to make your points.
+
+These all show the same thing, just in different ways. Not all of these figures made it into the paper, but it helped us in examining the raw data.
+
+```{r}
+pref_theme <- theme_classic() +
+  theme(text = element_text(size = 14))
+
+ggplot(size_dat, aes( y = log2_length, x = trait, col = selection:sex)) +
+  geom_boxplot(outlier.shape = NA) + 
+  geom_point(size = 1.25, alpha = 0.25, 
+                position=position_jitterdodge(0.5), show.legend= FALSE) +
+  labs( y = "length, log2(µm)") +
+  theme_classic() +
+  theme(text = element_text(size = 24))
+
+
+ggplot(size_dat, aes( y = log2_length, x = selection, col = sex)) +
+  geom_boxplot(outlier.shape = NA) + 
+  geom_point(size = 1.25, alpha = 0.25, 
+                position=position_jitterdodge(0.5), show.legend= FALSE) +
+  facet_wrap(~trait, scales = "free_y") +
+  labs( y = "length, log2(µm)") +
+  theme(text = element_text(size = 20),
+        axis.text.x = element_text(size = 18, angle = 45, vjust = 0.5))
+
+
+# violin plots as an alternative. Using log2 transformed. 
+ggplot(size_dat, aes( y = log2_length, x = trait, col = selection:sex)) +
+  geom_violin() +
+  labs( y = "length, log2(µm)") +
+  theme_classic() +
+  theme(text = element_text(size = 24))
+
+
+
+
+ggplot(size_dat, aes( y = log2_length, x = selection, colour = sex)) +
+  geom_quasirandom(alpha = 0.2) +
+  labs( y = "length, log2(µm)") +
+  theme_classic() +
+  theme(text = element_text(size = 18)) + 
+  facet_wrap(~trait)
+
+ggplot(size_dat, aes( x = log2_length, y = trait:selection, colour = sex )) + 
+  theme_bw() +
+  geom_density_ridges(scale = 0.95, alpha = 0.75, rel_min_height = 0.00001)
+```
+
+
+
+
+```{r}
+# Supplement
+
+ggplot(size_dat, aes( x = log2_length, y = selection, colour = sex )) + 
+  theme_bw() +
+  ylab("Selection treatment") +
+  xlab(expression(trait ~ size ~ log[2] ~ µm)) +
+  geom_density_ridges(size = 0.15, scale = 0.95, alpha = 0.75, rel_min_height = 0.00001) + 
+  facet_wrap( ~ trait, scales = "free", strip.position = "bottom") +
+  scale_y_discrete(expand = expansion(add = c(0.2, 1)))
+```
+
+**Tyler check what these were supposed to do.**
+```{r}
+# Supplement
+ggplot(size_dat, aes( x = log2_length, y = selection, colour = sex, linetype = replicate)) + 
+  theme_bw() +
+  ylab("Selection treatment") +
+  xlab(expression(log[2] ~ trait ~ size)) +
+  geom_density_ridges(size = 0.15, scale = 0.95, alpha = 0.75, rel_min_height = 0.00001, position = "dodge") + 
+  facet_wrap(vars(trait), scales = "free", strip.position = "bottom") +
+  scale_y_discrete(expand = expansion(add = c(0.2, 1)))
+```
+
+A few maybe outliers other than the one I noticed, but nothing crazy. When we go through this together we can identify these so you can do a check.
+
+Note to JK from ID: Did you ever fix these? For the moment we can just remove them.
+
+
+### checking for data duplicates
+
+Sometimes the same image gets duplicated accidently. This will not be super useful for this data (but it will be for the wing area which uses an image macro so it always reproduces the exact same results.)
+
+```{r}
+str(size_dat)
+
+anyDuplicated(size_dat) # none for the entire row
+anyDuplicated(size_dat$image_name[size_dat$repeat_measure == "1"]) # none have the same identifier 
+```
+
+Normally we would also check for duplication of size, but with three digits we would expect many duplicates given the size ranges.
+
+
+## Additional data clean up can be added here once we have all the images fixed.
+
+```{r}
+with(size_dat,
+     tapply(length, trait:selection, quantile, 
+            probs = c(0,0.005, 0.5, 0.995, 1)))
+```
+
+
+
+## Additional plots of raw data
+
+Let's look at each trait one at a time, but now seperated out the random individuals from those used for selection. Think about what this information might tell us biologically about the relative efficiency of artificial selection. In particular why after more than 350 generations of selection, what might be contributing to the fact that there are (or are not) differences between random individuals from that generation and those post-selection sieve.
+
+```{r}
+ggplot(size_dat[size_dat$trait == "femur",], 
+       aes( y = length, x = selection, col = sex:replicate)) +
+  geom_boxplot(outlier.shape = NA) + 
+  geom_point(size = 1.25, alpha = 0.25, 
+                position = position_jitterdodge(0.5), show.legend= FALSE) +
+  labs( y = "length (mm)") +
+  ggtitle("femur") +
+  theme_classic() +
+  theme(text = element_text(size = 24))
+
+ggplot(size_dat[size_dat$trait == "thorax",], 
+       aes( y = length, x = selection, col = sex:sampling)) +
+  geom_violin() +
+  labs( y = "length (mm)") +
+  ggtitle("thorax") +
+  theme_classic() +
+  theme(text = element_text(size = 24))
+```
+
+
+How about for other traits.
+Femur, Tibia and tarsus
+
+I have suppressed the legend (show.legend = F) in the boxplot as it is the same for the ones above. You can add it back in.
+
+```{r}
+ggplot(size_dat[size_dat$trait == "femur",], 
+       aes( y = length, x = selection, col = sex:replicate)) +
+  geom_boxplot(outlier.shape = NA, show.legend = FALSE) + 
+  geom_point(size = 1.25, alpha = 0.25, 
+                position=position_jitterdodge(0.5), show.legend= FALSE) +
+  labs( y = "length (mm)") +
+  ggtitle("femur") +
+  theme_classic() +
+  theme(text = element_text(size = 24))
+
+ggplot(size_dat[size_dat$trait == "tibia",], 
+       aes( y = length, x = selection, col = sex:sampling)) +
+  geom_boxplot(outlier.shape = NA, show.legend = FALSE) + 
+  geom_point(size = 1.25, alpha = 0.25, 
+                position=position_jitterdodge(0.5), show.legend= TRUE) +
+  labs( y = "length (mm)") +
+  ggtitle("tibia") +
+  theme_classic() +
+  theme(text = element_text(size = 24))
+
+ggplot(size_dat[size_dat$trait == "tarsus",], 
+       aes( y = length, x = selection, col = sex:sampling)) +
+  geom_boxplot(outlier.shape = NA, show.legend = FALSE) + 
+  geom_point(size = 1.25, alpha = 0.25, 
+                position=position_jitterdodge(0.5), show.legend= FALSE) +
+  labs( y = "length (mm)") +
+  ggtitle("tarsus") +
+  theme_classic() +
+  theme(text = element_text(size = 24))
+```
+
+
+### Real models (these have the info you want)
+
+I am including a sampling effect (random vs selectively sieved individuals). the First part of the model (sex + selection + sampling all with ^2) is an R way of saying including interactions between those terms, but only allow pairwise (the 2) interaction. 
+
+The second piece ( 1 + sex | replicate:selection)) is allowing the different replicate lineages to vary.
+
+Don't worry about the warning. I checked alternative optimizers (allFit), and estimates were very similar.
+
+
+The full multivariate mixed model is below the individual trait-by-trait models. Estimates were all very similar as well.
+
+Note, the reason we do the log transformation of the response in the model call is so that in emmeans we can use `type = response` to exponentiate back to linear scale.
+
+#### Thorax
+
+```{r}
+mod1_thorax <- lmer(log2(length*1000) ~ (sex + selection + sampling)^2 + (0 + sex| replicate:selection),
+           data = size_dat, REML = FALSE,
+           subset = repeat_measure == "1" & trait == "thorax" )
+
+summary(mod1_thorax) # the intercept is the estimate for control random females.
+
+
+#supplemental table *****
+thorax_anova <- Anova(mod1_thorax) # The ANOVA table for this model
+# permanova.lmer(mod1_thorax) confirming approximations in ANOVA via permutation.
+
+#pairs(emmeans(mod1_thorax, ~selection | sex, type = "response" ))
+
+
+# plots of the model estimated values and 95% Confidence intervals.
+plot(emmeans(mod1_thorax, specs = ~ sex | selection),
+     xlab = "model estimates, thorax length")
+
+
+#How about sexual dimorphism among the lineages?
+thorax_vals_df <- as.data.frame(emmeans(mod1_thorax, 
+             specs = ~ sex | selection, type = "response"))
+
+
+thorax_vals <- emmeans(mod1_thorax, 
+             specs = ~ sex | selection, type = "response")
+
+
+thorax_plot <- ggplot(thorax_vals_df, aes(x = response, y = selection, colour = sex)) +
+  #geom_point() +
+  theme_bw() +
+  scale_colour_grey(start = 0.5, end = 0) +
+  geom_pointrange(aes(xmin = upper.CL, xmax = lower.CL), position = position_dodge(width=0.5), size = 0.25) +
+  xlab("Thorax mean, microm") +
+  ylab(NULL)
+
+thorax_vals
+
+pairs(thorax_vals) # paired contrasts for sexual dimorphism in each lineage
+
+plot(pairs(thorax_vals)) + 
+  geom_vline(xintercept = 1, lty = 2, alpha = 0.5) + 
+  labs(x = "sexual size dimorphism") +
+  theme_bw()
+
+treatment_contrast <- pairs(emmeans(mod1_thorax, specs = ~ selection | sex))
+
+##
+##
+## These numbers are the numbers in paragraph 1
+confint(treatment_contrast)
+##
+##
+##
+
+
+thorax_vals_log2 <- emmeans(mod1_thorax, 
+             specs = ~ sex | selection)
+pairs(thorax_vals_log2)
+```
+
+
+## changes in SSD across treatments
+
+ This is the change in SSD for each treatment relative to the SSD in control lineages. I used interaction contrasts (contrast of contrasts) to get this.
+ 
+ 
+
+```{r}
+# to set things up for the interaction contrast
+thorax_ssd <- emmeans(mod1_thorax,  pairwise ~ sex*selection)
+
+
+# actual interaction contrasts we care about
+thorax_ssd_contrasts <- contrast(thorax_ssd[[1]], 
+                                 interaction = c(selection = "trt.vs.ctrl1", sex = "pairwise"),
+                                 by = NULL)
+
+
+thorax_ssd_contrasts
+
+thorax_ssd_contrasts_df <- as.data.frame(confint(thorax_ssd_contrasts))
+
+
+thorax_contrast <- ggplot(thorax_ssd_contrasts_df, aes(y = selection_trt.vs.ctrl1, x = estimate)) + 
+  geom_vline(xintercept = 0, lty = 2, alpha = 0.5) + 
+  labs(y = "Thorax") +
+  scale_colour_grey(start = 0.5, end = 0) +
+  geom_pointrange(aes(xmin = upper.CL, xmax = lower.CL), position = position_dodge(width=0.5), size = 0.25) +
+  xlab(NULL) +
+  xlim(c(-0.25,0.25)) +
+  theme_bw() +
+  theme(axis.ticks = element_blank(), axis.text.x = element_blank())
+```
+
+
+#### Femur
+
+
+Now for femur. Take a note that sampling effects seem weaker.
+```{r}
+mod1_femur <- lmer(log2(length*1000) ~ (sex + selection + sampling)^2 + (0 + sex| replicate:selection),
+           data = size_dat, REML = FALSE,
+           subset = repeat_measure == "1" & trait == "femur" )
+
+summary(mod1_femur) # the intercept is the estimate for control random females.
+
+femur_anova <- as.data.frame(Anova(mod1_femur)) # The ANOVA table for this model. 
+#permanova.lmer(mod1_femur) # similar results under permutation. 
+
+
+# plots of the model estimated values and 95% Confidence intervals.
+plot(emmeans(mod1_femur, specs = ~ sex | selection, type = "response"),
+     xlab = "model estimates, femur length, microm")
+
+#How about sexual dimorphism among the lineages?
+
+
+femur_vals <- emmeans(mod1_femur, 
+             specs = ~ sex | selection, type = "response")
+
+femur_vals_df <- as.data.frame(femur_vals) 
+
+femur_plot <- ggplot(femur_vals_df, aes(x = response, y = selection, colour = sex)) +
+  theme_classic() +
+  scale_colour_grey(start = 0.5, end = 0) +
+  geom_pointrange(aes(xmin = upper.CL, xmax = lower.CL), position = position_dodge(width = 0.5), size = 0.25) +
+  xlab("Femur length, µm") +
+  ylab(NULL)
+
+femur_plot 
+
+femur_vals
+pairs(femur_vals)
+
+plot(pairs(femur_vals)) + geom_vline(xintercept = 1, lty = 2, alpha = 0.5) + labs(x = "sexual size dimorphism")
+
+
+treatment_contrast_femur <- pairs(emmeans(mod1_femur, specs = ~ selection | sex))
+
+##
+##
+## These numbers are the numbers in paragraph 1
+confint(treatment_contrast_femur)
+
+
+femur_vals_log2 <- emmeans(mod1_femur, 
+             specs = ~ sex | selection)
+
+pairs(femur_vals_log2)
+```
+
+
+
+Interaction contrasts. This is the change in SSD for each treatment relative to the SSD in control lineages.  
+
+```{r}
+femur_ssd <- emmeans(mod1_femur,  pairwise ~ sex*selection)
+
+femur_ssd_contrasts <- contrast(femur_ssd[[1]], 
+                                 interaction = c(selection = "trt.vs.ctrl1", sex = "pairwise"),
+                                 by = NULL)
+
+
+femur_ssd_contrasts
+
+femur_ssd_contrasts_df <- as.data.frame(confint(femur_ssd_contrasts))
+
+femur_contrast <- ggplot(femur_ssd_contrasts_df, aes(y = selection_trt.vs.ctrl1, x = estimate)) + 
+  geom_vline(xintercept = 0, lty = 2, alpha = 0.5) + 
+  labs(y = "Femur") +
+  scale_colour_grey(start = 0.5, end = 0) +
+  geom_pointrange(aes(xmin = upper.CL, xmax = lower.CL), position = position_dodge(width = 0.5), size = 0.25) +
+  xlab(NULL) +
+  xlim(c(-0.25, 0.25)) +
+  theme_bw() +
+  theme(axis.ticks = element_blank(), axis.text.x = element_blank())
+
+```
+
+
+#### tibia
+
+Note, that the fit for the default model was singular (VCV parameters likely at boundary). So I checked two ways, using a reduced rank approach for the VCV matrix of random effects, and using a regularizing prior. similar results for the fixed effects we care about.
+
+```{r}
+mod1_tibia <- lmer(log2(length*1000) ~ (sex + selection + sampling)^2 + (0 + sex| replicate:selection), REML = FALSE,
+           data = size_dat, subset = repeat_measure == "1" & trait == "tibia" )
+
+checkFit_mod1_tibia <- allFit(mod1_tibia) # making sure the model is behaving
+
+summary(checkFit_mod1_tibia)$fixef # all gave the same estimates, across different optimization approaches
+
+# reduced rank version of model
+mod1_tibia_TMB <- glmmTMB(log2(length*1000) ~ (sex + selection + sampling)^2 + rr(0 + sex| replicate:selection, d = 2), REML = FALSE,
+           data = size_dat[size_dat$repeat_measure == "1" & size_dat$trait == "tibia", ] )
+
+fixef(mod1_tibia_TMB) # very similar to the unconstrained VCV of RE
+
+# blme version
+mod1_tibia_b <- blmer(log2(length*1000) ~ (sex + selection + sampling)^2 + (0 + sex| replicate:selection),
+                      REML = FALSE,
+                  fixef.prior = NULL,
+                  cov.prior = wishart,
+                  resid.prior = invgamma,
+                  control=lmerControl(optCtrl=list(ftol_abs = 1e-11, boundary.tol = 1e-8),
+                                      check.conv.grad = .makeCC("warning", tol = 2e-5, relTol = NULL),
+                                      optimizer = "nloptwrap"),
+           data = size_dat, subset = repeat_measure == "1" & trait == "tibia" )
+
+
+fixef(mod1_tibia_b)
+
+
+summary(mod1_tibia) # the intercept is the estimate for control random females.
+
+tibia_anova <- Anova(mod1_tibia) # The ANOVA table for this model. 
+
+
+# very similar estimates
+fixef(mod1_tibia)
+fixef(mod1_tibia_TMB)
+fixef(mod1_tibia_b)
+
+# plots of the model estimated values and 95% Confidence intervals.
+plot(emmeans(mod1_tibia_TMB, specs = ~ sex | selection, type = "response"),
+     xlab = "model estimates, tibia length")
+
+#How about sexual dimorphism among the lineages?
+
+tibia_vals <- emmeans(mod1_tibia_TMB, 
+             specs = ~ sex | selection, type = "response")
+
+
+tibia_vals_df <- as.data.frame(tibia_vals)
+
+
+
+tibia_plot <- ggplot(tibia_vals_df, aes(x = response, y=selection, colour = sex)) +
+  #geom_point() +
+  theme_bw() +
+  scale_colour_grey(start = 0.5, end = 0) +
+  geom_pointrange(aes(xmin = upper.CL, xmax = lower.CL), position=position_dodge(width=0.5), size = 0.25) +
+  xlab("Tibia mean, microm") +
+  ylab(NULL)
+
+tibia_vals
+
+pairs(tibia_vals)
+
+plot(pairs(tibia_vals)) + geom_vline(xintercept = 1, lty = 2, alpha = 0.5) + labs(x = "sexual size dimorphism")
+
+treatment_contrast_tibia <- pairs(emmeans(mod1_tibia, specs = ~ selection | sex))
+
+##
+##
+## These numbers are the numbers in paragraph 1
+confint(treatment_contrast_tibia)
+
+
+
+tibia_vals_log2 <- emmeans(mod1_tibia_TMB, 
+             specs = ~ sex | selection)
+
+pairs(tibia_vals_log2)
+```
+
+
+
+Interaction contrasts. This is the change in SSD for each treatment relative to the SSD in control lineages. 
+
+```{r}
+tibia_ssd <- emmeans(mod1_tibia_TMB,  pairwise ~ sex*selection)
+
+tibia_ssd_contrasts <- contrast(tibia_ssd[[1]], 
+                                 interaction = c(selection = "trt.vs.ctrl1", sex = "pairwise"),
+                                 by = NULL)
+
+
+tibia_ssd_contrasts
+
+tibia_ssd_contrasts_df <- as.data.frame(confint(tibia_ssd_contrasts))
+
+tibia_contrast <- ggplot(tibia_ssd_contrasts_df, aes(y = selection_trt.vs.ctrl1, x = estimate)) +
+  geom_vline(xintercept = 0, lty = 2, alpha = 0.5) + 
+  labs(y = "Tibia") +
+  scale_colour_grey(start = 0.5, end = 0) +
+  geom_pointrange(aes(xmin = upper.CL, xmax = lower.CL), position = position_dodge(width=0.5), size = 0.25) +
+  xlab(NULL) +
+  xlim(c(-0.25,0.25)) +
+  theme_bw() +
+  theme(axis.ticks = element_blank(), axis.text.x = element_blank())
+```
+
+
+#### tarsus
+```{r}
+mod1_tarsus <- lmer(log2(length*1000) ~ (sex + selection + sampling)^2 + (1 + sex| replicate:selection), REML = FALSE,
+           data = size_dat, subset = repeat_measure == "1" & trait == "tarsus" )
+
+
+summary(mod1_tarsus) # the intercept is the estimate for control random females.
+
+tarsus_anova <- Anova(mod1_tarsus) # The ANOVA table for this model. 
+
+# plots of the model estimated values and 95% Confidence intervals.
+plot(emmeans(mod1_tarsus, 
+             specs = ~ sampling:sex | selection, type = "response"))
+
+
+#How about sexual dimorphism among the lineages?
+
+tarsus_vals <- emmeans(mod1_tarsus, 
+             specs = ~ sex | selection, type = "response")
+
+
+tarsus_vals_df <- as.data.frame(tarsus_vals)
+
+tarsus_plot <- ggplot(tarsus_vals_df, aes(x = response, y = selection, colour = sex)) +
+  #geom_point() +
+  theme_bw() +
+  scale_colour_grey(start = 0.5, end = 0) +
+  geom_pointrange(aes(xmin = upper.CL, xmax = lower.CL), position = position_dodge(width = 0.5), size = 0.25) +
+  xlab("Tarsus mean, microm") +
+  ylab(NULL)
+
+tarsus_vals
+pairs(tarsus_vals)
+
+plot(pairs(tarsus_vals)) + geom_vline(xintercept = 1, lty = 2, alpha = 0.5) + labs(x = "sexual size dimorphism")
+
+treatment_contrast_tarsus <- pairs(emmeans(mod1_tarsus, specs = ~ selection | sex))
+
+##
+##
+## These numbers are the numbers in paragraph 1
+confint(treatment_contrast_tarsus)
+
+
+
+tarsus_vals_log2 <- emmeans(mod1_tarsus, 
+             specs = ~ sex | selection)
+pairs(tarsus_vals_log2)
+```
+
+
+
+
+Interaction contrasts. This is the change in SSD for each treatment relative to the SSD in control lineages.  
+
+```{r}
+tarsus_ssd <- emmeans(mod1_tarsus,  pairwise ~ sex*selection)
+
+tarsus_ssd_contrasts <- contrast(tarsus_ssd[[1]], 
+                                 interaction = c(selection = "trt.vs.ctrl1", sex = "pairwise"),
+                                 by = NULL)
+
+
+tarsus_ssd_contrasts
+
+tarsus_ssd_contrasts_df <- as.data.frame(confint(tarsus_ssd_contrasts))
+
+tarsus_contrast <- ggplot(tarsus_ssd_contrasts_df, aes(y = selection_trt.vs.ctrl1, x = estimate)) + 
+  geom_vline(xintercept = 0, lty = 2, alpha = 0.5) + 
+  labs(x = "Change in SSD relative to control lineages", y = "Tarsus") +
+  scale_colour_grey(start = 0.5, end = 0) +
+  geom_pointrange(aes(xmin = upper.CL, xmax = lower.CL), position = position_dodge(width=0.5), size = 0.25) +
+  #xlab(NULL) +
+  xlim(c(-0.25,0.25)) +
+  theme_bw()
+```
+
+Plotting contrast plots
+```{r}
+part1 <- plot_grid(thorax_contrast, femur_contrast, tibia_contrast, tarsus_contrast, ncol = 1, 
+                   rel_heights = c(0.25,0.25,0.25,0.37))
+
+part2 <- textGrob("Comparison", 
+                   gp = gpar(col = "black", fontsize = 12), rot = 90)
+#Figure 3
+plot_grid(part2, part1, ncol = 2, rel_widths = c(0.05, 1))
+```
+
+
+
+
+```{r}
+thorax_vals_df$Trait <- c("thorax") 
+femur_vals_df$Trait <- c("femur") 
+tibia_vals_df$Trait <- c("tibia") 
+tarsus_vals_df$Trait <- c("tarsus")
+
+trait_size <- rbind(thorax_vals_df, femur_vals_df, tibia_vals_df, tarsus_vals_df)
+
+
+##
+## Figure 3
+##
+
+trait_size$Trait <- factor(trait_size$Trait, levels = c("thorax", "femur", "tibia", "tarsus"))
+
+size_plot <- ggplot(trait_size, aes(x = response, y = selection, colour = sex)) +
+  theme_bw() +
+  facet_grid(rows = trait_size$Trait) +
+  scale_colour_grey(start = 0.5, end = 0) +
+  geom_pointrange(aes(xmin = lower.CL, xmax = upper.CL), position = position_dodge(width=0.5), size = 0.15) +
+  xlab(expression("Trait length "*mu*"m")) +
+  ylab(NULL)
+
+```
+
+
+
+### multivariate mixed model
+
+See [this](https://github.com/mac-theobio/QMEE/blob/master/lectures/MultivariateMixed.rmd) link for information on what I did and what it means.
+
+
+`REML = FALSE` as I am interested largely in the fixed effects. 
+
+
+Please note that the full multivariate mixed model is singular with pure MLE. But either adding a regulazing prior to the VCV matrix of random effects and residuals, or a reduced rank approach, both fit, and result in very similar estimates for all fixed effects.
+
+**Please note that the lmer and blmer multivariate fits take a while to estimate, and a while to generate values for the estimated means and contrasts**
+
+```{r}
+#SINGULAR fit
+all_trait_mod1 <- lmer(log2(length*1000) ~ trait:(selection + sex + sampling)^2 - 1 +
+                      (trait:sex - 1|replicate:selection) + (trait - 1|unique_id),
+                  data = size_dat, REML = FALSE,
+                  subset = repeat_measure == "1",
+                  control = lmerControl(optCtrl=list(ftol_abs = 1e-8),
+                                      optimizer = "bobyqa",
+                                      check.nobs.vs.nlev = "ignore",
+                                      check.nobs.vs.nRE = "ignore"))
+
+
+# regularization of the VCV matrix and get away from getting stuck on boundary values.
+
+all_trait_mod1b <- blmer(log2(length*1000) ~ trait:(selection + sex + sampling)^2 - 1 +
+                      (trait:sex - 1|replicate:selection) + (trait - 1|unique_id),
+                  data = size_dat, REML = FALSE,
+                  fixef.prior = NULL,
+                  cov.prior = wishart,
+                  resid.prior = invgamma,
+                  subset = repeat_measure == "1",
+                  control = lmerControl(optCtrl = list(ftol_abs = 1e-8),
+                                      optimizer = "bobyqa",
+                                      check.nobs.vs.nlev = "ignore",
+                                      check.nobs.vs.nRE = "ignore"))
+
+summary(all_trait_mod1b)
+
+
+Anova(all_trait_mod1b)
+```
+
+
+#### reduced rank multivariate mixel linear model
+
+same idea, but using glmmTMB to fit reduced rank VCV, to deal with the singular fit.
+```{r}
+
+all_trait_mod1_TMB <- glmmTMB(log2(length*1000) ~ trait:(selection + sex + sampling)^2 - 1 +
+                      rr(trait:sex - 1|replicate:selection, d = 7) + rr(trait - 1|unique_id, d = 7),
+                  data = size_dat[size_dat$repeat_measure == "1", ], REML = FALSE,
+                  control = glmmTMBControl(optCtrl = list(iter.max = 1e4, eval.max = 1e4),
+                                      optimizer = "nlminb"))
+
+fixef(all_trait_mod1_TMB)
+Anova(all_trait_mod1_TMB)
+```
+
+
+SSD contrasts (relative to control lineages) for each trait
+```{r}
+plot(emmeans(all_trait_mod1_TMB, 
+             specs = ~ sex:selection | trait),
+         xlab = "length in log2 µm",
+         ylab = "")
+
+# to extract direction of dimorphism ONLY, don't use for contrasts!
+all_traits_ssd <- emmeans(all_trait_mod1_TMB,  pairwise ~ trait*sex*selection)
+
+# not this either, this is set up
+all_traits_ssd_extract  <- pairs(emmeans(all_trait_mod1_TMB, 
+             specs = ~ sex | selection + trait), 
+             simple = "sex", by = "trait")
+
+
+
+## This is the interaction contrasts we care about!
+all_traits_ssd_contrasts <- contrast(all_traits_ssd[[1]], 
+                                 interaction = c(selection = "trt.vs.ctrl1", sex = "pairwise"),
+                                 by = "trait")
+
+as.data.frame(all_traits_ssd_contrasts)
+
+plot(all_traits_ssd_contrasts) + 
+  geom_vline(xintercept = 0, lty = 2, alpha = 0.5) + 
+  labs(x = "change in SSD relative to control lineages", y = "comparison") +
+  theme_bw()
+```
+
+### SSD index
+
+```{r}
+trait_vals <- emmeans(all_trait_mod1_TMB, 
+             specs = ~ sex | trait:selection)
+
+trait_vals
+
+print(trait_vals)
+summary(trait_vals)
+```
+
+
+Some other stuff (for the paper)
+
+```{r}
+VarCorr(all_trait_mod1_TMB)
+```
+
+
+
+
+## Principal components analysis
+
+Only with the single observations, not repeat measures to estimate measurement error.
+
+```{r}
+size_dat_1 <- size_dat[size_dat$repeat_measure == 1,]
+
+size_dat_1$selection <- sub("Discordant", "SSD", size_dat_1$selection,)
+
+size_dat_1$selection <- as.factor(size_dat_1$selection)
+
+size_dat_1$flyID <- paste(size_dat_1$sex, size_dat_1$selection, size_dat_1$replicate, size_dat_1$sampling, size_dat_1$individual_id, sep = "_")
+
+
+
+# I make my data wide while maintaining the ID column and create new columns for each unique NewTrait
+wide_fly <- (size_dat_1 %>%
+             pivot_wider(id_cols = flyID, names_from = trait, values_from = log2_length) %>%
+             separate(flyID, into = c("sex", "selection", "replicate", "sampling", "individual_id"), sep = "_"))
+
+sum(is.na(wide_fly))
+
+wide_fly <- na.omit(wide_fly)
+
+sum(is.na(wide_fly))
+
+wide_fly <- as.data.frame(wide_fly)
+```
+
+
+
+A PCA for all of the data to examine. We did not use this in the paper, was more to examine overall patterns. 
+```{r}
+pca_traits <- prcomp(wide_fly[, 6:9])
+
+summary(pca_traits)
+
+pca_traits$sdev  # eigenvalues
+pca_traits$rotation #eigenvectors/loadings/coefficients
+
+pca_traits$sdev^2/sum(pca_traits$sdev^2) # this can be used for the scree plot. squaring values to make variances, not sd
+
+
+#compare to isometric vector
+1/sqrt(4)
+
+biplot(pca_traits, pch = 20)
+
+pca_x <- pca_traits$x
+
+autoplot(pca_traits, data = wide_fly,
+         x = 1, y = 2, 
+         loadings = TRUE, loadings.label = TRUE,
+         colour = "sex", shape = "selection", size = 3, alpha = 0.6)
+
+autoplot(pca_traits, data = wide_fly,
+         x = 2, y = 3, 
+         loadings = TRUE, loadings.label = TRUE,
+         colour = "sex", shape = "selection", size = 3, alpha = 0.6)
+
+autoplot(pca_traits, data = wide_fly,
+         x = 3, y = 4, 
+         loadings = TRUE, loadings.label = TRUE,
+         colour = "sex", shape = "selection", size = 3, alpha = 0.6)
+```
+
+
+
+
+Plotting of the global PCA
+```{r}
+## Testing out ggplot to colour variables
+
+df <- data.frame(PC1 = pca_x[,1], PC2 = pca_x[,2], PC3 = pca_x[,3], sex = wide_fly$sex, 
+                 selection = wide_fly$selection, replicate = wide_fly$replicate, 
+                 femur = wide_fly$femur, tibia = wide_fly$tibia, tarsus = wide_fly$tarsus, thorax = wide_fly$thorax )
+
+plot_1 <- filter(df, selection == "Control") %>%
+ggplot(aes(x = PC1, y = PC2, colour = sex)) +
+  #ggtitle("(A)") +
+  theme_bw() +
+  scale_colour_manual(values = c("black", "grey")) +
+  #xlab(NULL) +
+  #ylab(NULL) +
+  geom_point(show.legend = FALSE, alpha = 0.75)
+
+plot_2 <- filter(df, selection == "SSD") %>%
+ggplot(aes(x = PC1, y = PC2, colour = sex)) +
+  #ggtitle("(B)") +
+  theme_bw() +
+  scale_colour_manual(values = c("grey", "black")) +
+  #xlab(NULL) +
+  #ylab(NULL) +
+  geom_point(alpha = 0.75)
+  #theme(legend.title = element_blank(),
+   #     legend.spacing.y = unit(0, "mm"), 
+    #    panel.border = element_rect(colour = NULL, fill=NA),
+     #   aspect.ratio = 1, axis.text = element_text(colour = 1, size = 12),
+      # legend.background = element_blank(),
+       # legend.box.margin = element_blank())
+
+plot_3 <- filter(df, selection == "Small") %>%
+ggplot(aes(x = PC1, y = PC2, colour = sex)) +
+  #ggtitle("(C)") +
+  theme_bw() +
+  scale_colour_manual(values = c("black", "grey")) +
+  #xlab(NULL) +
+  #ylab(NULL) +
+  geom_point(show.legend = FALSE, alpha = 0.75)
+
+plot_4 <- filter(df, selection == "Large") %>%
+ggplot(aes(x = PC1, y = PC2, colour = sex)) +
+  #ggtitle("(D)") +
+  theme_bw() +
+  theme(legend.position="bottom") +
+  scale_colour_manual(values = c("black", "grey")) +
+  #xlab(NULL) +
+  #ylab(NULL) +
+  geom_point(show.legend = FALSE, alpha = 0.75)
+
+legend <- get_legend(plot_2)
+
+plot_grid(plot_1, plot_2 + theme(legend.position = "none"), rel_widths = c(1, 1), plot_3, plot_4, labels = c("(A)", "(B)", "(C)", "(D)"), label_size = 8) +
+  draw_plot(legend, x = 0.43, y = 0.725, width = .45, height = .4)
+```
+
+
+## Comparing major axes of allometric variation by treatment groups and sex
+
+Automating the computation of the variance-covariance matrices, so we can extract the eigenvalues, etc.
+```{r}
+
+wide_fly_R <- wide_fly[wide_fly$sampling == "R", ]
+
+
+#nmake sure sample sizes per group are reasonable
+with(wide_fly_R, table(selection, sex))
+
+VCV_matrices <- with(wide_fly_R, 
+     by(wide_fly_R[, 6:9], 
+   selection,
+   function(x) cov(x)))
+
+prop_eigen_vals <- sapply(VCV_matrices, function(x) svd(x)$d/sum(svd(x)$d)) # prop variance for each eigenvalue/PC
+
+integration <- sapply(VCV_matrices, function(x) sd(svd(x)$d)/mean(svd(x)$d)) # Not sure if we care, but I could do a bootstrap to generate CI.
+
+vectors_treatment <- lapply(VCV_matrices, function(x) svd(x)$u)
+
+
+# PCA by group
+PCA_selection <- with(wide_fly_R, 
+     by(wide_fly_R[, 6:9], 
+   selection,
+   function(x) prcomp(x)))
+```
+
+
+
+**Please Note**
+
+the PCA for the SSD reversed got arbitrarily flipped in sign. So to keep everything easier to read, I am multiplying eigenvectors and PC scores for it by -1
+
+
+
+```{r}
+PCA_selection$SSD$rotation
+
+PCA_selection$SSD$rotation <- -1 * PCA_selection$SSD$rotation
+
+PCA_selection$SSD$rotation
+
+head(PCA_selection$SSD$x)
+
+PCA_selection$SSD$x <- -1 * PCA_selection$SSD$x
+
+head(PCA_selection$SSD$x)
+```
+
+
+
+###vScree plots for eigenvales for each covariance matrix, by treatment.
+
+
+**This is the one for the paper** change formatting anyway you see fit.
+```{r}
+
+colnames(prop_eigen_vals)[4] <- "Sex-discordant"
+
+ggmatplot(prop_eigen_vals,
+        ylab = "proportion of variance explained", xlab = "PC",  
+        alpha = 0.75, lwd = 1.5,
+        plot_type = "both", legend_title = "Selection") +
+        theme(axis.title = element_text(size = rel(1.5)),
+              axis.text = element_text(size = rel(2))) +
+  theme_bw()
+```
+
+
+
+```{r}
+biplot(PCA_selection$Control)
+biplot(PCA_selection$Small)
+biplot(PCA_selection$Large)
+biplot(PCA_selection$SSD)
+```
+
+
+**Tyler check this. I think there is a bug in the code for plotting below**
+
+## how best to visualize this?
+
+### biplots for the PCA by treatments I think will be pretty clear.
+
+### control
+```{r}
+dat_temp_Control <- wide_fly_R[wide_fly_R$selection == "Control",]
+
+# This initial plot in each chunk is just to get the arrow end locations for formatting labels
+
+pca_C <- autoplot(PCA_selection$Control, data = dat_temp_Control,
+         x = 1, y = 2, 
+         loadings = TRUE, loadings.label = TRUE, loadings.label.size=2,
+         colour = "sex", size = 0.8, alpha = 0.7, loadings.label.vjust = -0.9, loadings.label.hjust = 0.7)
+
+# This gets the location of the ends of arrow
+
+arrow_ends <- layer_data(pca_C, 2)[,c(2,4)]
+
+# And then I can use those locations to modify the location of the loading labels
+
+pca_C <- autoplot(PCA_selection$Control, data = dat_temp_Control,
+         x = 1, y = 2, 
+         loadings = TRUE, loadings.label = TRUE, loadings.label.size=2,
+         colour = "sex", size = 0.8, alpha = 0.7, loadings.label.vjust = 1.25, loadings.label.hjust = 1) +
+  xlim(c(-0.25,0.3)) +
+     geom_point(data = arrow_ends, aes(xend, yend), size = 0, colour = "red") +
+  ggtitle("Control") +
+  theme_bw() +
+  scale_colour_grey(start = 0.5, end = 0) +
+  theme(legend.position = "none")
+
+
+```
+
+
+
+
+```{r}
+dat_temp_SSD <- wide_fly_R[wide_fly_R$selection == "SSD",]
+
+pca_dis <- autoplot(PCA_selection$SSD, data = dat_temp_SSD,
+         x = 1, y = 2, 
+         loadings = TRUE, loadings.label = TRUE, loadings.label.size=2,
+         colour = "sex", size = 0.8, alpha = 0.7, loadings.label.vjust = 1, loadings.label.hjust = -0.25) +
+     geom_point(data = arrow_ends, aes(xend, yend), size = 0, colour = "red")
+
+arrow_ends <- layer_data(pca_dis, 2)[,c(2,4)]
+
+pca_dis <- autoplot(PCA_selection$SSD, data = dat_temp_SSD,
+         x = 1, y = 2, 
+         loadings = TRUE, loadings.label = TRUE, loadings.label.size=2,
+         colour = "sex", size = 0.8, alpha = 0.7, loadings.label.vjust = -0.5, loadings.label.hjust = 1.25) +
+     geom_point(data = arrow_ends, aes(xend, yend), size = 0, colour = "red") +
+  ggtitle("Discordant") +
+  theme_bw() +
+  scale_colour_grey(start = 0.5, end = 0) +
+  theme(legend.position = "none")
+```
+
+
+```{r}
+dat_temp_Small <- wide_fly_R[wide_fly_R$selection == "Small",]
+
+pca_small <- autoplot(PCA_selection$Small, data = dat_temp_Small,
+         x = 1, y = 2, 
+         loadings = TRUE, loadings.label = TRUE, loadings.label.size=2,
+         colour = "sex", size = 0.85, alpha = 0.7, loadings.label.vjust = 1.55, loadings.label.hjust = 0.7)
+
+arrow_ends <- layer_data(pca_small, 2)[,c(2,4)]
+
+pca_small <- autoplot(PCA_selection$Small, data = dat_temp_Small,
+         x = 1, y = 2, 
+         loadings = TRUE, loadings.label = TRUE, loadings.label.size=2,
+         colour = "sex", size = 0.85, alpha = 0.7, loadings.label.vjust = 1.55, loadings.label.hjust = 0.7) +
+     geom_point(data = arrow_ends, aes(xend, yend), size = 0, colour = "red") +
+  ggtitle("Small") +
+  theme_bw() +
+  scale_colour_grey(start = 0.5, end = 0) +
+  theme(legend.position = "none")
+```
+
+
+
+```{r}
+dat_temp_Large <- wide_fly_R[wide_fly_R$selection == "Large",]
+
+pca_large <- autoplot(PCA_selection$Large, data = dat_temp_Large,
+         x = 1, y = 2, 
+         loadings = TRUE, loadings.label = TRUE, loadings.label.size=2,
+         colour = "sex", size = 0.85, alpha = 0.7, loadings.label.vjust = 1.25, loadings.label.hjust = 0.95)
+
+arrow_ends <- layer_data(pca_large, 2)[,c(2,4)]
+
+pca_large <- autoplot(PCA_selection$Large, data = dat_temp_Large,
+         x = 1, y = 2, 
+         loadings = TRUE, loadings.label = TRUE, loadings.label.size=2,
+         colour = "sex", size = 0.85, alpha = 0.7, loadings.label.vjust = 1.25, loadings.label.hjust = 0.95) +
+     geom_point(data = arrow_ends, aes(xend, yend), size = 0, colour = "red") +
+  ggtitle("Large") +
+  theme_bw() +
+  scale_colour_grey(start = 0.5, end = 0) +
+  theme(legend.position = "none")
+```
+
+
+Figure 4
+PCA plotting for paper
+```{r}
+
+plota <- plot_grid(pca_C,pca_dis,pca_large,pca_small)
+
+plot_grid(plota,legend,rel_widths = c(1,0.15))
+
+
+```
+
+
+
+### comparing the covariance matrices
+
+
+For our own gratification
+```{r}
+plotsubspace(CA = VCV_matrices$Control, CB = VCV_matrices$Large, 
+             corr = FALSE, shadeCB = TRUE, 
+             shadeCA = FALSE, axes.lab = FALSE)
+
+
+plotsubspace(CA = VCV_matrices$Control, CB = VCV_matrices$Small, 
+             corr = FALSE, shadeCA = FALSE, 
+             shadeCB = FALSE, axes.lab = FALSE)
+
+
+plotsubspace(CA = VCV_matrices$Control, CB = VCV_matrices$SSD, 
+             corr = FALSE, shadeCA = FALSE, 
+             shadeCB = FALSE, axes.lab = FALSE)
+```
+
+
+
+## Actual analyses of use
+```{r}
+KrzCor(cov.x = VCV_matrices$Control,
+       cov.y = VCV_matrices$SSD)
+
+KrzProjection(cov.y = VCV_matrices$Control,
+       cov.x = VCV_matrices$SSD)
+
+KrzCor(cov.x = VCV_matrices$Control,
+       cov.y = VCV_matrices$Large)
+
+KrzProjection(cov.y = VCV_matrices$Control,
+       cov.x = VCV_matrices$Large)
+
+KrzCor(cov.x = VCV_matrices$Control,
+       cov.y = VCV_matrices$Small)
+
+KrzProjection(cov.y = VCV_matrices$Control,
+       cov.x = VCV_matrices$Small)
+
+KrzCor(cov.x = VCV_matrices$Control,
+       cov.y = VCV_matrices$Small)
+
+KrzProjection(cov.y = VCV_matrices$Large,
+       cov.x = VCV_matrices$Small)
+
+
+```
+
+## other stuff
+
+Next step: looking at repeat measures
+To do this I just extracted only the repeat measures, then I ran a model looking at the measurements of trait and the interaction with repeat measure to see if there was a large interaction effect
+
+```{r}
+
+repeated <- subset(size_dat, duplicated(image_name)|duplicated(image_name, fromLast = TRUE))
+
+unique(repeated$repeat_measure)
+
+nrow(filter(repeated, repeat_measure == "1"))
+nrow(filter(repeated, repeat_measure == "2"))
+
+test1 <- lm(log2_length ~ trait*repeat_measure, data = repeated)
+
+```
+
+There does not appear to be a large interaction effect. So it seems like measurement error isn't a massive issue
+

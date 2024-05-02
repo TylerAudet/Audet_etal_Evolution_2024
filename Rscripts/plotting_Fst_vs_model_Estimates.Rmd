@@ -1,0 +1,60 @@
+---
+title: "plotting_Fst_vs_model_Estimates"
+author: "Tyler Audet"
+date: "2024-04-30"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This script was used to plot our Fst estimates vs. our modelled estimates (Figures S9-S11).
+
+The data read in here was not provided due to their size, but are generated from 'grenedalf' Fst estimates as well as our R script for modelling between treatment log odds. Provided here is the code for our discordant treatment vs. controls, but the same script was used for the large vs. small and discordant vs. all others, by changing which files were read in and which contrast was extracted from 'mod' on line 26.
+
+```{r}
+library(data.table)
+library(tidyverse)
+
+fst <- read.table("../data/EvC_fst.txt", header = TRUE)
+mod <- read.table("../data/EvC_contrast.txt", header = TRUE)
+```
+
+```{r}
+
+mod <- mod[mod$contrast == "control_vs_discordant",]
+
+colnames(mod) <- c("chrom","contrast","start","odds.ratio",
+                   "SE","df","UCL","LCL","pval")
+
+mod$chrom <- as.factor(mod$chrom)
+mod$start <- as.integer(mod$start)
+fst$chrom <- as.factor(fst$chrom)
+fst$start <- as.integer(fst$start)
+
+ddat <- full_join(fst, mod, by=c("chrom","start"))
+
+ddat <- ddat[ddat$odds.ratio != "Inf",]
+
+ggplot(ddat, aes(x = C.E, y = abs(log(as.numeric(odds.ratio))))) +
+  geom_point(alpha = 0.2) +
+  ylim(0,12) +
+  xlab("Genetic differentiation (Fst)") +
+  ylab("Absolute log odds ratio")
+```
+
+Below we extract values with a low p value and convert these to the bed file format for extraction out of a vcf downstream.
+
+```{r}
+
+sites <- ddat[as.numeric(ddat$pval) <= 10^-8,]
+
+bed <- sites[,c(1,2,2)]
+colnames(bed) <- c("chrom","chromStart","chromEnd")
+                             
+write.table(bed, "../data/EvC_interesting_bed.bed", quote = FALSE, row.names = FALSE, col.names = TRUE)           
+
+
+```
+

@@ -1,0 +1,106 @@
+---
+title: "Simulation_Fst_Analysis"
+author: "Tyler Audet"
+date: "2024-04-30"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This script is used to take the Fst estimates obtained using 'grenedalf' from our 100 simulated chromosome 3L samples. First we load required packages and set our working directory in the same folder the Fst estimates are in.
+
+```{r}
+library(data.table)
+library(tidyverse)
+library(cowplot)
+
+
+setwd("../data/simulations/")
+
+temp = list.files()
+
+ddat <- lapply(temp, function(x) read.csv(x, header=T))
+```
+
+Quantiles of interest are calculated from each of these files and extracted for plotting.
+
+```{r}
+
+df <- as.data.frame(setNames(lapply(ddat, function(x,y) quantile(x$F.M, c(0.95,0.99,0.999,1))), temp))
+
+mt <- as.matrix(df)
+quantile(mt[4,1:100], c(0.95,1))
+
+#       95%       100% 
+#0.02140172 0.04159120 
+
+```
+
+The following code is checking regions of high Fst in the simulations to ensure they are not a product of issues with the code used to generate them.
+
+```{r}
+test <- as.data.table(ddat[[20]])
+test$pos <- 1:nrow(test)
+test$F.M <- pmax(test$F.M,0)
+test1 <- test[,c(1,2,3,5)]
+
+test1_plot <- manhattan(test1)
+
+test_again <- as.data.table(ddat[[15]])
+test_again$pos <- 1:nrow(test_again)
+test_again$F.M <- pmax(test_again$F.M,0)
+test2 <- test_again[,c(1,2,3,5)]
+
+test2_plot <- manhattan(test2)
+
+test_again_and_again <- as.data.table(ddat[[80]])
+test_again_and_again$pos <- 1:nrow(test_again_and_again)
+test_again_and_again$F.M <- pmax(test_again_and_again$F.M,0)
+test3 <- test_again_and_again[,c(1,2,3,5)]
+
+test3_plot <- manhattan(test3)
+
+plot_grid(test1_plot,test2_plot,test3_plot, ncol = 1)
+
+
+ggplot(test, aes(x = pos, y = F.M)) +
+  ylim(c(0,0.1)) +
+  geom_point()
+
+
+test[,test[F.M > 0.03]]
+
+```
+
+This chunk pulls out the quantiles of interest for the specific region on chromosome 3L that we identified in our empirical samples.
+
+```{r}
+
+region_quants <- list()
+
+sub_mat <- for (i in 1:100) {
+  
+  temp_dat <- as.data.table(ddat[[i]])
+  temp_2 <- temp_dat[start > 18100000 & end < 21600000]
+  region_quants <- rbind(region_quants, quantile(temp_2$F.M, c(0.95,1)))
+  
+}
+
+region_m <- as.matrix(pmax(region_quants,0))
+
+mean(as.numeric(region_m[,1]), na.rm = T) # 0.001282437 # mean 95th quantile
+max(as.numeric(region_m[,2]), na.rm = T) # 0.0207949 highest value in the region
+
+```
+
+
+
+
+
+
+
+

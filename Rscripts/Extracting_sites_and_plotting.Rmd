@@ -1,0 +1,418 @@
+---
+title: "Extracting_sites_and_plotting"
+author: "Tyler Audet"
+date: "2024-04-30"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This script is a mash up of a few small jobs that were done at one time. Mainly, sites of interest were extracted from outputs from other scripts, and converted to bed format so that they can be extracted from vcf files with bedtools downstream.
+
+Input files are not provided due to size.
+
+```{r}
+require(data.table)
+library(ggplot2)
+library(cowplot)
+library(dplyr)
+
+repsMerged_fst <- read.csv("../data/repsMerged_10000_fst.csv", header = T)
+repsMerged_pi <- read.csv("../data/repsMerged_50000_pidiversity.csv", header = T)
+sexesMerged_pi <- read.csv("../data/sexesMerged_10000_pidiversity.csv")
+CVE_CMH <- read.table("../data/CVE_CMH.txt", header = T)
+LVS_CMH <- read.table("../data/LVS_CMH.txt", header = T)
+```
+
+From the main Fst grenedalf output we extract the Fst comparison of interest for each treatment comparison.
+
+```{r}
+#Fst work
+
+EvC <- repsMerged_fst[,c(1,2,3,5)]
+EvL <- repsMerged_fst[,c(1,2,3,8)]
+EvS <- repsMerged_fst[,c(1,2,3,9)]
+CvL <- repsMerged_fst[,c(1,2,3,6)]
+CvS <- repsMerged_fst[,c(1,2,3,7)]
+LvS <- repsMerged_fst[,c(1,2,3,10)]
+
+#This function converts the Fst objects to bed files while also extracting the top 5% of Fst values
+fst_95th <- function(sample) {
+  colnames(sample) <- c("chrom","chromStart","chromEnd","fst")
+  index <- sample[,4] > quantile(sample[,4], 0.95, na.rm = T)
+  print(sample[index,])
+}
+
+#clean up the NAs present
+EvC95th <- na.omit(fst_95th(EvC))
+CvL95th <- na.omit(fst_95th(CvL))
+CvS95th <- na.omit(fst_95th(CvS))
+LvS95th <- na.omit(fst_95th(LvS))
+```
+
+
+```{r}
+# Pi work
+
+#This function pulls out the lowest pi values and converts them to a file that can be easily converted to a bed file downstream
+belowAverage <- function(sample) {
+  colnames(sample) <- c("chrom","chromStart","chromEnd","SNPs","coverage","absPi","pi")
+  index <- sample[,7] < quantile(sample[,7], 0.1)
+  print(sample[index,])
+}
+
+# extract the pi values for each treatment from the master pi output from grenedalf
+
+C1.pi <- sexesMerged_pi[,c(1,2,3,4,5,6,7)]
+#        25% 
+#0.001177841
+C2.pi <- sexesMerged_pi[,c(1,2,3,8,9,10,11)]
+#        24% 
+#0.001612448
+E1.pi <- sexesMerged_pi[,c(1,2,3,12,13,14,15)]
+#38% 
+#0.0007034037
+E2.pi <- sexesMerged_pi[,c(1,2,3,16,17,18,19)]
+#         42% 
+#0.0005729075 
+L1.pi <- sexesMerged_pi[,c(1,2,3,20,21,22,23)]
+#        32% 
+#0.001158655
+L2.pi <- sexesMerged_pi[,c(1,2,3,24,25,26,27)]
+#        23% 
+#0.001576384 
+S1.pi <- sexesMerged_pi[,c(1,2,3,28,29,30,31)]
+#        33% 
+#0.001232849 
+S2.pi <- sexesMerged_pi[,c(1,2,3,32,33,34,35)]
+#        38% 
+#0.001156258
+
+# pi plot
+ggplot(C1.pi, aes(x = C1.theta_pi_rel)) +
+  geom_histogram()
+
+# extracting lowest relative pi values
+low_C1.pi <- C1.pi[C1.pi$C1.theta_pi_rel < 0.0005,]
+low_C2.pi <- C2.pi[C2.pi$C2.theta_pi_rel < 0.0005,]
+low_E1.pi <- E1.pi[E1.pi$E1.theta_pi_rel < 0.0005,]
+low_E2.pi <- E2.pi[E2.pi$E2.theta_pi_rel < 0.0005,]
+low_L1.pi <- L1.pi[L1.pi$L1.theta_pi_rel < 0.0005,]
+low_L2.pi <- L2.pi[L2.pi$L2.theta_pi_rel < 0.0005,]
+low_S1.pi <- S1.pi[S1.pi$S1.theta_pi_rel < 0.0005,]
+low_S2.pi <- S2.pi[S2.pi$S2.theta_pi_rel < 0.0005,]
+
+# extract unusually high pi values
+high_C1.pi <- C1.pi[C1.pi$C1.theta_pi_rel > 0.01,]
+high_C2.pi <- C2.pi[C2.pi$C2.theta_pi_rel > 0.01,]
+high_E1.pi <- E1.pi[E1.pi$E1.theta_pi_rel > 0.01,]
+high_E2.pi <- E2.pi[E2.pi$E2.theta_pi_rel > 0.01,]
+high_L1.pi <- L1.pi[L1.pi$L1.theta_pi_rel > 0.01,]
+high_L2.pi <- L2.pi[L2.pi$L2.theta_pi_rel > 0.01,]
+high_S1.pi <- S1.pi[S1.pi$S1.theta_pi_rel > 0.01,]
+high_S2.pi <- S2.pi[S2.pi$S2.theta_pi_rel > 0.01,]
+```
+
+
+```{r}
+#CMH work
+
+# convert p-value to -log10 for plotting purposes
+CVE_CMH$neg_p <- -log10(CVE_CMH[,3])
+LVS_CMH$neg_p <- -log10(LVS_CMH[,3])
+
+CVE_CMH <- CVE_CMH[,c(1,2,2,6)]
+LVS_CMH <- LVS_CMH[,c(1,2,2,6)]
+
+colnames(CVE_CMH) <- c("chrom","chromStart","chromEnd","neg.log.p")
+colnames(LVS_CMH) <- c("chrom","chromStart","chromEnd","neg.log.p")
+
+sig_CVE <- na.omit(CVE_CMH[CVE_CMH$neg.log.p < 0.01,])
+sig_LVS <- na.omit(LVS_CMH[LVS_CMH$neg.log.p < 0.01,])
+
+# a function to convert the first three columns of a table to a bed file
+toBED <- function(x) {
+  x <- x[,c(1,2,3)]
+  colnames(x) <- c("chrom","chromStart","chromEnd")
+  x$chrom <- paste0("chr", x$chrom)
+  return(x)
+}
+
+CMH_LvS <- toBED(sig_LVS)
+CMH_EvC <- toBED(sig_CVE)
+
+# create windows around the CMH SNPs of interest for extraction
+CMH_LvS$chromStart <- CMH_LvS$chromStart -5
+CMH_LvS$chromEnd <- CMH_LvS$chromEnd +5
+
+CMH_EvC$chromStart <- CMH_EvC$chromStart -5
+CMH_EvC$chromEnd <- CMH_EvC$chromEnd +5
+
+pi_C1 <- toBED(low_C1.pi)
+pi_C2 <- toBED(low_C2.pi)
+pi_E1 <- toBED(low_E1.pi)
+pi_E2 <- toBED(low_E2.pi)
+pi_L1 <- toBED(low_L1.pi)
+pi_L2 <- toBED(low_L2.pi)
+pi_S1 <- toBED(low_S1.pi)
+pi_S2 <- toBED(low_S2.pi)
+
+fst_EvC <- toBED(EvC95th)
+fst_CvL <- toBED(CvL95th)
+fst_CvS <- toBED(CvS95th)
+fst_LvS <- toBED(LvS95th)
+
+# write out bed files
+
+write.table(CMH_LvS, "../data/sig_CMH_LvS.bed",quote = F, row.names = F,col.names = T, sep = "\t")
+write.table(CMH_EvC, "../data/sig_CMH_EvC.bed",quote = F, row.names = F,col.names = T, sep = "\t")
+
+write.table(pi_C1, "../data/C1_pi.bed",quote = F, row.names = F,col.names = T, sep = "\t")
+write.table(pi_C2, "../data/C2_pi.bed",quote = F, row.names = F,col.names = T, sep = "\t")
+write.table(pi_E1, "../data/E1_pi.bed",quote = F, row.names = F,col.names = T, sep = "\t")
+write.table(pi_E2, "../data/E2_pi.bed",quote = F, row.names = F,col.names = T, sep = "\t")
+write.table(pi_L1, "../data/L1_pi.bed",quote = F, row.names = F,col.names = T, sep = "\t")
+write.table(pi_L2, "../data/L2_pi.bed",quote = F, row.names = F,col.names = T, sep = "\t")
+write.table(pi_S1, "../data/S1_pi.bed",quote = F, row.names = F,col.names = T, sep = "\t")
+write.table(pi_S2, "../data/S2_pi.bed",quote = F, row.names = F,col.names = T, sep = "\t")
+
+write.table(fst_EvC, "~/Dropbox/TylerAudet/Stewart_flies/Genome_paper/data/fst_EvC.bed",quote = F, row.names = F,col.names = T, sep = "\t")
+write.table(fst_CvL, "~/Dropbox/TylerAudet/Stewart_flies/Genome_paper/data/fst_CvL.bed",quote = F, row.names = F,col.names = T, sep = "\t")
+write.table(fst_CvS, "~/Dropbox/TylerAudet/Stewart_flies/Genome_paper/data/fst_CvS.bed",quote = F, row.names = F,col.names = T, sep = "\t")
+write.table(fst_LvS, "~/Dropbox/TylerAudet/Stewart_flies/Genome_paper/data/fst_LvS.bed",quote = F, row.names = F,col.names = T, sep = "\t")
+```
+
+Below we load in the within treatment Fst estimates for plotting. The csv file is not provided due to size, but is output from grenedalf
+
+```{r}
+
+# Sex specific fst
+
+sex <- read.csv("../data/windowsfst.csv",header = T)
+
+# pull out comparisons that we care about and changing NA values to 0. NA values are introduced when there are SNPs in one comparison but not another, meaning there were no SNPs in the other treatment and can be considered of an Fst of 0
+E1FvE1M <- sex[,c("chrom","start","end","E1F.E1M")]
+E2FvE2M <- sex[,c("chrom","start","end","E2F.E2M")]
+C1FvC1M <- sex[,c("chrom","start","end","C1F.C1M")]
+C2FvC2M <- sex[,c("chrom","start","end","C2F.C2M")]
+L1FvL1M <- sex[,c("chrom","start","end","L1F.L1M")]
+L2FvL2M <- sex[,c("chrom","start","end","L2F.L2M")]
+S1FvS1M <- sex[,c("chrom","start","end","S1F.S1M")]
+S2FvS2M <- sex[,c("chrom","start","end","S2F.S2M")]
+
+E1FvE1M[is.na(E1FvE1M)] <- 0
+E2FvE2M[is.na(E2FvE2M)] <- 0
+C1FvC1M[is.na(C1FvC1M)] <- 0
+C2FvC2M[is.na(C2FvC2M)] <- 0
+L1FvL1M[is.na(L1FvL1M)] <- 0
+L2FvL2M[is.na(L2FvL2M)] <- 0
+S1FvS1M[is.na(S1FvS1M)] <- 0
+S2FvS2M[is.na(S2FvS2M)] <- 0
+
+
+# a function to identify the location of the middle position in a chromosome just to line up text during plotting.
+middleChr <- function(ddat, chrom) {
+  a <- dim(subset(ddat, chrom == "X"))[1]
+  b <- dim(subset(ddat, chrom == "2L"))[1]
+  c <- dim(subset(ddat, chrom == "2R"))[1]
+  d <- dim(subset(ddat, chrom == "3L"))[1]
+  e <- dim(subset(ddat, chrom == "3R"))[1]
+  #f <- dim(subset(dat, chr == "4"))[1]
+  
+  result <- as.vector(rep(NA, 6))
+  result[1] <- a/2
+  result [2] <- a + (b/2)
+  result[3] <- a + b + (c/2)
+  result[4] <- a + b + c + (d/2)
+  result[5] <- a + b + c + d + (e/2)
+  #result[6] <- a + b + c + d + e + (f/2)
+  return(result)
+  
+}
+
+
+# plotting script
+manhattan <- function(ddat) {
+colnames(ddat) <- c("chrom","start","end","fst")
+
+ddat$fst <- pmax(ddat$fst, 0)
+
+ddat <- ddat[ddat$chrom != "4",]
+
+ddat$position <- 1:nrow(ddat)
+
+chrlabel<-middleChr(ddat)
+
+plot <- ggplot(ddat, aes(x=position,y=fst, colour = chrom)) +
+  geom_point(size=0.65, show.legend = F, alpha = 0.2) +
+  theme(panel.background = element_blank()) +
+  scale_colour_manual(values=c("black", "darkgrey", "black", "darkgrey", "black")) +
+  stat_smooth(aes(group=as.factor(chrom)), colour = "red", size = 0.5, span= 1, method = "gam", method.args = list(family = binomial)) +
+  ylab("Genetic Differentiation Fst") +
+  scale_x_discrete(limits=c(chrlabel),
+                   labels = c("2L", "2R", '3L', '3R', "X")) +
+  #geom_smooth(colour = chrom) +
+  xlab("Chromosome") +
+  ylim(0,0.2) +
+  geom_hline(yintercept=0.04159120,linetype="dashed", color = "darkorchid4") +
+  geom_hline(yintercept=0.02140172,linetype="dashed", color = "darkorchid1") +
+  theme(text = element_text(size=9),
+        axis.text.x= element_text(size=7),
+        axis.text.y= element_text(size=7))
+
+plot
+
+}
+```
+
+Below is script to identify mean Fst per chromosome in each comparison. We also determine the standard deviation to extract sites greater than 3 standard deviations from the mean Fst.
+
+```{r}
+
+E1FvE1M$E1F.E1M <- pmax(E1FvE1M$E1F.E1M, 0)
+mean(E1FvE1M[E1FvE1M$chrom == "2L",]$E1F.E1M)
+#0.0009409689
+mean(E1FvE1M[E1FvE1M$chrom == "2R",]$E1F.E1M)
+#0.001169328
+mean(E1FvE1M[E1FvE1M$chrom == "3L",]$E1F.E1M)
+sd(E1FvE1M[E1FvE1M$chrom == "3L",]$E1F.E1M)*3
+tripleSD <- E1FvE1M[E1FvE1M$chrom == "3L",]$E1F.E1M > 0.0371
+E13L <- E1FvE1M[E1FvE1M$chrom == "3L",]
+E13L_tripleSD <- E13L[tripleSD,]
+E1_region <- toBED(E13L_tripleSD)
+write.table(E1_region, "../data/high_E1_3L.bed", row.names = F, quote = F, sep = "\t")
+# 3 sd = 0.0371
+#mean = 0.004950469
+mean(E1FvE1M[E1FvE1M$chrom == "3R",]$E1F.E1M)
+#0.001002729
+mean(E1FvE1M[E1FvE1M$chrom == "X",]$E1F.E1M)
+#0.001612214
+
+
+E2FvE2M$E2F.E2M <- pmax(E2FvE2M$E2F.E2M, 0)
+mean(E2FvE2M[E2FvE2M$chrom == "2L",]$E2F.E2M)
+#0.0009554421
+mean(E2FvE2M[E2FvE2M$chrom == "2R",]$E2F.E2M)
+#0.001531268
+mean(E2FvE2M[E2FvE2M$chrom == "3L",]$E2F.E2M)
+#0.001471747
+mean(E2FvE2M[E2FvE2M$chrom == "3R",]$E2F.E2M)
+#0.0006479401
+mean(E2FvE2M[E2FvE2M$chrom == "X",]$E2F.E2M)
+#0.0009404873
+
+C1FvC1M$C1F.C1M <- pmax(C1FvC1M$C1F.C1M, 0)
+mean(C1FvC1M[C1FvC1M$chrom == "2L",]$C1F.C1M)
+#0.001447176
+mean(C1FvC1M[C1FvC1M$chrom == "2R",]$C1F.C1M)
+#0.001619427
+mean(C1FvC1M[C1FvC1M$chrom == "3L",]$C1F.C1M)
+#0.001011423
+mean(C1FvC1M[C1FvC1M$chrom == "3R",]$C1F.C1M)
+#0.001129888
+mean(C1FvC1M[C1FvC1M$chrom == "X",]$C1F.C1M)
+#0.002078582
+
+C2FvC2M$C2F.C2M <- pmax(C2FvC2M$C2F.C2M, 0)
+mean(C2FvC2M[C2FvC2M$chrom == "2L",]$C2F.C2M)
+#0.002452551
+mean(C2FvC2M[C2FvC2M$chrom == "2R",]$C2F.C2M)
+#0.001695329
+mean(C2FvC2M[C2FvC2M$chrom == "3L",]$C2F.C2M)
+#0.002149255
+mean(C2FvC2M[C2FvC2M$chrom == "3R",]$C2F.C2M)
+#0.00160856
+mean(C2FvC2M[C2FvC2M$chrom == "X",]$C2F.C2M)
+#0.001362086
+
+L1FvL1M$L1F.L1M <- pmax(L1FvL1M$L1F.L1M, 0)
+mean(L1FvL1M[L1FvL1M$chrom == "2L",]$L1F.L1M)
+#0.0009210051
+mean(L1FvL1M[L1FvL1M$chrom == "2R",]$L1F.L1M)
+#0.001425453
+mean(L1FvL1M[L1FvL1M$chrom == "3L",]$L1F.L1M)
+# 0.0008621582
+mean(L1FvL1M[L1FvL1M$chrom == "3R",]$L1F.L1M)
+#0.000913988
+mean(L1FvL1M[L1FvL1M$chrom == "X",]$L1F.L1M)
+#0.00195688
+
+L2FvL2M$L2F.L2M <- pmax(L2FvL2M$L2F.L2M, 0)
+mean(L2FvL2M[L2FvL2M$chrom == "2L",]$L2F.L2M)
+#0.001009218
+mean(L2FvL2M[L2FvL2M$chrom == "2R",]$L2F.L2M)
+#0.001076183
+mean(L2FvL2M[L2FvL2M$chrom == "3L",]$L2F.L2M)
+#0.002177343
+mean(L2FvL2M[L2FvL2M$chrom == "3R",]$L2F.L2M)
+#0.001561794
+mean(L2FvL2M[L2FvL2M$chrom == "X",]$L2F.L2M)
+#0.001655175
+
+S1FvS1M$S1F.S1M <- pmax(S1FvS1M$S1F.S1M, 0)
+mean(S1FvS1M[S1FvS1M$chrom == "2L",]$S1F.S1M)
+#0.003753856
+mean(S1FvS1M[S1FvS1M$chrom == "2R",]$S1F.S1M)
+#0.002265773
+mean(S1FvS1M[S1FvS1M$chrom == "3L",]$S1F.S1M)
+#0.002031051
+mean(S1FvS1M[S1FvS1M$chrom == "3R",]$S1F.S1M)
+#0.001856927
+mean(S1FvS1M[S1FvS1M$chrom == "X",]$S1F.S1M)
+#0.001608565
+
+S2FvS2M$S2F.S2M <- pmax(S2FvS2M$S2F.S2M, 0)
+mean(S2FvS2M[S2FvS2M$chrom == "2L",]$S2F.S2M)
+#0.0006898907
+mean(S2FvS2M[S2FvS2M$chrom == "2R",]$S2F.S2M)
+#0.001378223
+mean(S2FvS2M[S2FvS2M$chrom == "3L",]$S2F.S2M)
+#0.0009626403
+mean(S2FvS2M[S2FvS2M$chrom == "3R",]$S2F.S2M)
+#0.001612527
+mean(S2FvS2M[S2FvS2M$chrom == "X",]$S2F.S2M)
+#0.002141678
+```
+
+Here we extract the 99th percentile of Fst from samples. We also create plots used in figures of the Fst values.
+
+```{r}
+
+E1_3L <- E1FvE1M[E1FvE1M$chrom == "3L",]
+
+fst_99th <- function(sample) {
+  colnames(sample) <- c("chrom","chromStart","chromEnd","fst")
+  index <- sample[,4] > quantile(sample[,4], 0.99, na.rm = T)
+  print(sample[index,])
+}
+
+high_E1_3L <- fst_99th(E1_3L)
+
+write.table(high_E1_3L, "../data/high_E1_3L.bed", quote = F, row.names = F,col.names = T, sep = "\t")
+
+##Plots
+
+EvC_plot <- manhattan(EvC)
+LvS_plot <- manhattan(LvS)
+
+plot_grid(EvC_plot,LvS_plot,ncol = 1,labels = c('A', 'B'))
+
+C1_plot <- manhattan(C1FvC1M)
+C2_plot <- manhattan(C2FvC2M)
+E1_plot <- manhattan(E1FvE1M)
+E2_plot <- manhattan(E2FvE2M)
+L1_plot <- manhattan(L1FvL1M)
+L2_plot <- manhattan(L2FvL2M)
+S1_plot <- manhattan(S1FvS1M)
+S2_plot <- manhattan(S2FvS2M)
+
+plot_grid(C1_plot,E1_plot,ncol = 1,labels = c('A', 'B'))
+
+```
+
+
+
+
+

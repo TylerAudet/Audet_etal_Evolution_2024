@@ -1,0 +1,87 @@
+---
+title: "Sex_comparison_general_linear_model"
+author: "Tyler Audet"
+date: "2024-04-30"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This script is an example of the linear modelling for the male vs. female modelling. This was run for each treatment independantly on a remote computer.
+
+First we read in a frequency table of major and minor allele frequencies. These frequency tables are not provided due to size, but are generated using the frequency table functions in 'grenedalf'.
+
+```{r}
+library(data.table)
+library(tidyverse)
+library(emmeans)
+
+
+majAllele <- fread("../data/C1.csv")
+
+header <- c("chrom", "pos", "maj_F", "min_F", "maj_M", "min_M")
+
+colnames(majAllele) <- header
+
+test <- as.data.frame(pivot_longer(majAllele,
+                                   cols = maj_F:min_M,
+                                   names_to = "treatment"))
+
+test2 <- separate(test, col = treatment, sep = "_", into = c("allele","sex"))
+test3 <- as.data.frame(pivot_wider(test2, names_from = allele, values_from = value))
+
+test3$pos <- as.factor(test3$pos)
+
+
+```
+
+Next we iterate over all positions with a binomial glm with a logit link function. We extract the emmeans and the confidence intervals and output them into their own table.
+
+```{r}
+out <- matrix(nrow = length(unique(test3$pos)), ncol = 9)
+
+
+x <- 1
+
+count <- 1
+for(i in unique(test3$pos)) {
+  
+  count <- count + 1
+  if (count%%10 == 0){
+    print(count)
+    print(Sys.time())
+  }
+  
+  pos <- i
+  data <- test3[(test3$pos == i),]
+  mod1 <- glm(cbind(maj,min) ~ sex,
+              data = data, family = binomial(link = "logit"))
+  
+  mod_emm <- emmeans(mod1, ~sex, type = "response")
+  #mod_emm_df <- as.data.frame(as.data.frame(mod_emm))
+
+contrast <- pairs(mod_emm)
+contrast_conf <- confint(contrast)
+contrast_df <- as.data.frame(as.data.frame(contrast))
+contrast_df_conf <- as.data.frame(as.data.frame(contrast_conf))
+
+num_contrast <- contrast_df[,2:7]
+num_conf <- contrast_df_conf[,5:6]
+
+contrast_final <- as.matrix(cbind(i,num_contrast,num_conf))
+
+
+out[x,] <- contrast_final
+
+x <- x+1
+
+}
+
+colnames(out) <- c("pos","odds.ratio","SE","df","null","z.ratio","pval","UCL","LCL")
+
+fwrite(out, "./C1_sex_model.txt", quote = FALSE, row.names = FALSE, col.names = TRUE, sep = "\t")
+
+```
+

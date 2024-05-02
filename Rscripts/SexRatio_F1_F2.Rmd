@@ -1,0 +1,272 @@
+---
+title: "Sex ratio from crosses among lineages"
+author: "Ian Dworkin"
+date: "`r format(Sys.time(),'%d %b %Y')`"
+output:
+  pdf_document: 
+    toc: yes
+    number_sections: yes
+  html_document: 
+    toc: yes
+    fig_caption: yes
+    keep_md: yes
+    number_sections: yes
+editor_options:
+  chunk_output_type: console
+---
+
+# analysis of sex ratio crosses among artificially selected lineages
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Background
+
+Experiments performed by Tyler Audet crossing artificially selected "Stewart" lineages (single pairs, reciprocally) to the LHm "ancestral" lineages. Offspring number and sexes were counted in F1 and F2. In addition crosses were performed within E1 and E2 (E is the sexually discordant treatment).
+
+## Set up
+
+### load libraries
+```{r}
+library(car)
+library(MASS)
+library(emmeans)
+library(tidyverse)
+```
+
+
+### load data
+```{r}
+sex_ratio_dat <- read.csv("../data/sex_ratio_cross.csv",
+                          header = TRUE)
+```
+
+### Check inputs
+
+```{r}
+system("wc -l ../data/sex_ratio_cross.csv")
+
+dim(sex_ratio_dat)
+```
+
+
+```{r}
+head(sex_ratio_dat)
+str(sex_ratio_dat)
+```
+
+
+**note:** replicate represents replicate crosses (i.e. unique dams and sires) from within a lineage.
+No individuals were used twice.
+
+
+### Make variables factors
+
+etc...
+
+```{r}
+sex_ratio_dat[,1:2] <- with(sex_ratio_dat, lapply(sex_ratio_dat[, 1:2], as.factor))
+
+str(sex_ratio_dat)
+```
+
+```{r}
+sex_ratio_dat$cross <- with(sex_ratio_dat, interaction(Sire, Dam, drop = TRUE))
+sex_ratio_dat$F1_total <- with(sex_ratio_dat, F1_Males + F1_Females)
+sex_ratio_dat$F2_total <- with(sex_ratio_dat, F2_Males + F2_Females)
+sex_ratio_dat$cross <- gsub("Lhm","LHm", sex_ratio_dat$cross)
+```
+
+
+## Analysis of Sex ratio data
+
+### F1
+
+model using all data including crosses *interse* among E1 and E2. This ignores reciprocal cross information (i.e. ignoring dam and sire effects)
+```{r}
+mod1_F1_alt <- glm(cbind(F1_Males, F1_Females) ~ cross, 
+               family = binomial,
+               data = sex_ratio_dat)
+
+Anova(mod1_F1_alt)
+
+summary(mod1_F1_alt)
+```
+
+
+```{r}
+estimates_out_alt <- emmeans(mod1_F1_alt, ~ cross, type = "response")
+
+estimates_out_alt
+
+ggplot(as.data.frame(as.data.frame(estimates_out_alt)), aes(x = prob, y = cross)) +
+  geom_pointrange(aes(xmin = asymp.LCL, xmax = asymp.UCL)) +
+  xlab("Model estimated sex ratios") +
+  ylab("Cross (Sire.Dam)") +
+  geom_vline(xintercept = 0.5,linetype="dashed") +
+  theme_classic()
+```
+
+
+
+### F2
+
+```{r}
+mod1_F2_alt <- glm(cbind(F2_Males, F2_Females) ~ cross, 
+               family = binomial,
+               data = sex_ratio_dat)
+
+Anova(mod1_F2_alt)
+
+summary(mod1_F2_alt)
+
+estimates_out_F2_alt <- emmeans(mod1_F2_alt, ~ cross, type = "response")
+
+estimates_out_F2_alt
+
+ggplot(as.data.frame(as.data.frame(estimates_out_F2_alt)), aes(x = prob, y = cross)) +
+  geom_pointrange(aes(xmin = asymp.LCL, xmax = asymp.UCL)) +
+  xlab("Model estimated sex ratios") +
+  ylab("Cross (Sire.Dam)") +
+  geom_vline(xintercept = 0.5,linetype="dashed") +
+  theme_classic()
+
+```
+
+
+
+### Check whether direction of crosses (when crossed to LHm) matters
+
+subset data to only include data with crosses with LHm
+
+Below we make the predictor variables necessary for the analysis (direction of cross to LHm and lineage crossed to LHm)
+
+```{r}
+dummy_rows <- with(sex_ratio_dat,
+                   ifelse( (Sire == "Lhm" | Dam == "Lhm"), TRUE, FALSE))
+
+sex_ratio_Lhm_dat <- droplevels(sex_ratio_dat[dummy_rows,])
+
+dim(sex_ratio_Lhm_dat)
+
+sex_ratio_Lhm_dat$cross_direction <- with(sex_ratio_Lhm_dat,
+                                          ifelse(Sire == "Lhm", "treatment_dam", "treatment_sire"))
+
+
+sex_ratio_Lhm_dat$lineage <- with(sex_ratio_Lhm_dat,
+                                          ifelse(Sire == "Lhm", as.character(Dam), as.character(Sire)))
+
+sex_ratio_Lhm_dat$lineage <- as.factor(sex_ratio_Lhm_dat$lineage)
+```
+
+
+### Fit model for sex ratio, F1
+```{r}
+mod1_F1 <- glm(cbind(F1_Males, F1_Females) ~ cross_direction*lineage, 
+               family = binomial,
+               data = sex_ratio_Lhm_dat)
+
+Anova(mod1_F1)
+
+summary(mod1_F1)
+```
+
+
+```{r}
+cross_direction_out_F1 <- emmeans(mod1_F1, ~ lineage| cross_direction, type = "response")
+
+cross_direction_out_F1
+
+```
+
+
+### F2
+```{r}
+mod1_F2 <- glm(cbind(F2_Males, F2_Females) ~ cross_direction*lineage, 
+               family = binomial,
+               data = sex_ratio_Lhm_dat)
+
+Anova(mod1_F2)
+
+summary(mod1_F2)
+```
+
+
+```{r}
+cross_direction_out_F2 <- emmeans(mod1_F2, ~ lineage| cross_direction, type = "response")
+
+cross_direction_out_F2
+```
+
+
+## Fecundity
+
+While the experiment was not set up specifically to examine fecundity (focus on sex ratio), we can examine this. Some limitations to this experiment to consider when interpreting this include the fact that flies were allowed to lay until larvae were visible, and then collected when vials were perceived to have mostly empty pupal cases.
+
+### F1 Fecundity, cross
+```{r}
+mod1_fecundity_F1_alt <- glm.nb(F1_total ~ cross, 
+               data = sex_ratio_dat)
+
+Anova(mod1_fecundity_F1_alt)
+
+summary(mod1_fecundity_F1_alt)
+
+fecundity_F1_crosses <- emmeans(mod1_fecundity_F1_alt, ~ cross, type = "response")
+fecundity_F1_crosses
+```
+
+### F1 Fecundity, reciprocal lineages considered
+```{r}
+mod1_fecundity_F1 <- glm.nb(F1_total ~ cross_direction*lineage, 
+               data = sex_ratio_Lhm_dat)
+
+Anova(mod1_fecundity_F1)
+
+summary(mod1_fecundity_F1)
+
+fecundity_F1_cross_direction <- emmeans(mod1_fecundity_F1, ~ lineage |cross_direction, type = "response")
+fecundity_F1_cross_direction
+
+ggplot(as.data.frame(as.data.frame(fecundity_F1_cross_direction)), aes(x = response, y = lineage, colour = cross_direction)) +
+  geom_pointrange(aes(xmin = asymp.LCL, xmax = asymp.UCL), position = position_dodge(width = 0.5), size = 0.25) +
+  xlab("Offspring produced") +
+  ylab("Cross") +
+  theme_classic()
+
+```
+
+### F2
+
+```{r}
+mod1_fecundity_F2_alt <- glm.nb(F2_total ~ cross, 
+               data = sex_ratio_dat)
+
+Anova(mod1_fecundity_F2_alt)
+
+summary(mod1_fecundity_F2_alt)
+
+fecundity_F2_crosses <- emmeans(mod1_fecundity_F2_alt, ~ cross, type = "response")
+fecundity_F2_crosses
+```
+
+### F2, Cross direction
+```{r}
+mod1_fecundity_F2 <- glm.nb(F2_total ~ cross_direction*lineage, 
+               data = sex_ratio_Lhm_dat)
+
+Anova(mod1_fecundity_F2)
+
+summary(mod1_fecundity_F2)
+
+fecundity_F2_cross_direction <- emmeans(mod1_fecundity_F2, ~ lineage |cross_direction, type = "response")
+fecundity_F2_cross_direction
+
+ggplot(as.data.frame(as.data.frame(fecundity_F2_cross_direction)), aes(x = response, y = lineage, colour = cross_direction)) +
+  geom_pointrange(aes(xmin = asymp.LCL, xmax = asymp.UCL), position = position_dodge(width = 0.5), size = 0.25) +
+  xlab("Offspring produced") +
+  ylab("Cross") +
+  theme_classic()
+```
+

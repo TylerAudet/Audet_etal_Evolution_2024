@@ -1,0 +1,54 @@
+---
+title: "Extracting_majAllele_frequencies_from_sync"
+author: "Tyler Audet"
+date: "2024-04-30"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This script takes a sync file with SNPs of interest, and output a 1 column matrix with the major allele for that sample (A,T,C,G). This can then be used to set reference allele in the original or other sync files. This was done to avoid the occurance in grenedalf where there was a heterogenic site where neither allele was the reference, which would result in grenedalf calling the allele as homozygous for the alternate allele.
+
+The sync file is not provided due to size. For this script the output of the SNP called sync file was used.
+
+```{r}
+library(tidyverse)
+
+test <- read.table("../data/SNPs.sync")
+
+a <- test[,c(1,2,3,4)]
+colnames(a) <- c("chrom","pos","ref", "data")
+a <- separate(a, data, into = c("A","T","C","G","N","del"))
+
+a$A <- as.numeric(a$A)
+a$T <- as.numeric(a$T)
+a$C <- as.numeric(a$C)
+a$G <- as.numeric(a$G)
+
+# need to see if there are tri-allelic sites and 
+# exclude them or just pull the highest two sites
+
+i <- 1
+#j <- 4
+freq.table <- list()
+count <- 0
+for(i in 1:nrow(a)) {
+  
+  count <- count + 1
+  if (count%%100 == 0){
+    print(count)
+    print(Sys.time())
+  }
+    
+temp <- a[i,4:7]
+maj.allele <- colnames(temp)[max.col(temp)]
+freq.table <- rbind(freq.table, colnames(temp)[max.col(temp)])
+i <- i + 1
+}
+
+write.table(freq.table, "./majAllele.txt", quote = FALSE, row.names = FALSE, col.names = FALSE)
+
+```
+

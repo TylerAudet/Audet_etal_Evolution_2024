@@ -1,0 +1,139 @@
+---
+title: "CMH_analysis"
+author: "Tyler Audet"
+date: "2024-04-30"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This script was used to calculate CMH. Input file is not provided due to size but is a SNP called sync file containing SNP counts for all treatments.
+
+```{r}
+
+library(poolSeq)
+library(ACER)
+
+reps <- c(1:8)
+gen <- rep(0,8)
+sync <- read.sync("../data/sexesMerged_subsetted_sync.sync", 
+                  gen=gen, repl=reps, 
+                  polarization = "minor", 
+                  keepOnlyBiallelic = TRUE)
+
+pops <-c('C1','C2','E1','E2','L1','L2','S1','S2')
+
+af.mat <- matrix(NA, nrow = nrow(sync@alleles), ncol = 8)
+colnames(af.mat) <- pops
+
+#calculate allele frequencies
+for (i in 1:ncol(af.mat)){
+  tempdat <- af(sync, repl = i, gen = 0)
+  af.mat[,i] <- as.matrix(tempdat)
+}
+
+af.mat <- na.omit(af.mat)
+head(af.mat)
+dim(af.mat)
+
+# extract allele frequencies for discordant vs. control and large vs. small
+af.mat2 <- af.mat[,c(1,2,3,4)]
+af.mat3 <- af.mat[,c(5,6,7,8)]
+dim(af.mat3)
+
+
+#now making a coverage object in the same way
+cov.mat <- matrix(NA, nrow = nrow(sync@alleles), ncol = 8)
+colnames(cov.mat) <- pops
+
+for (i in 1:ncol(cov.mat)){
+  tempdat <- coverage(sync, repl = i, gen = 0)
+  cov.mat[,i] <- as.matrix(tempdat)
+}
+
+covObj <- data.frame(cov.mat, sync@alleles[,1:2])
+covObj[covObj==0] <- NA
+covObj2 <- na.omit(covObj)
+location <- covObj2[,9:10]
+
+cov.mat[cov.mat == 0] <- NA
+cov.mat <- na.omit(cov.mat)
+
+dim(cov.mat)
+
+head(cov.mat)
+
+cov.mat2 <- cov.mat[,c(1,2,3,4)]
+cov.mat3 <- cov.mat[,c(5,6,7,8)]
+dim(cov.mat2)
+dim(cov.mat3)
+
+#Now I want to estimate Ne to use in the CMH calculation below.
+
+checkd <- checkSNP(p0=af.mat2[,1:2], pt=af.mat2[,3:4],
+         cov0=cov.mat2[,1:2], covt=cov.mat2[,3:4])
+
+index <- which(checkd[,1]==T & checkd[,2]==T)
+
+filtered.af <- af.mat2[index,]
+filtered.cov <- cov.mat2[index,]
+
+# This script was ran with different methods, as well as with and without extreme allele frequency positions masked, and all estimates were similar (see main text of paper) so this was the ne estimate we chose to use for further work
+ne <- estimateNe(p0=filtered.af[,"C1"], pt=filtered.af[,"E1"], 
+                 cov0=filtered.cov[,"C1"], covt=filtered.cov[,"E1"], 
+                 t=750, method = "P.planII", poolSize=c(200, 200))
+
+# Large vs. Small Ne
+checkd <- checkSNP(p0=af.mat3[,1:2], pt=af.mat3[,3:4],
+                   cov0=cov.mat3[,1:2], covt=cov.mat3[,3:4])
+
+index <- which(checkd[,1]==T & checkd[,2]==T)
+
+filtered.af <- af.mat3[index,]
+filtered.cov <- cov.mat3[index,]
+
+ne <- estimateNe(p0=filtered.af[,"L1"], pt=filtered.af[,"S1"], 
+                 cov0=filtered.cov[,"L1"], covt=filtered.cov[,"S1"], 
+                 t=750, method = "P.planII", poolSize=c(200, 200))
+
+
+#Creating the vars for the CMH test 
+rep<-c(1,1,2,2) #Number of replicates
+Ne<-c(91,140)
+tp<-c(0,0,750,750) #Generations of evolution for each sample
+ps<-c(200,200,200,200) #Pool size
+
+#cmh test for control vs. discordant
+
+pval <- adapted.cmh.test(freq=af.mat2, coverage=cov.mat2, 
+                         Ne=Ne, gen=tp, repl=rep, poolSize=ps)
+
+#cmh test for large vs. small
+
+pval2 <- adapted.cmh.test(freq=af.mat3, coverage=cov.mat3, 
+                          Ne=Ne, gen=tp, repl=rep, poolSize=ps)
+
+# fdr correcting p-values and calculating -log10 for future plotting
+
+padj <- p.adjust(pval, "fdr")
+data <- cbind(cov.mat2, pval, padj)
+data<-cbind(location,data)
+data<-data[,c(1,2,7,8)]
+data$neg.log10 <- -log10(data$padj)
+
+padj2 <- p.adjust(pval2, "fdr")
+data2 <- cbind(cov.mat3, pval2, padj2)
+data2<-cbind(location,data2)
+data2<-data2[,c(1,2,7,8)]
+data2$neg.log10 <- -log10(data2$padj)
+
+# writing out CMH tables
+
+write.table(data,"../data/CVE_CMH.txt", quote = FALSE, col.names = TRUE, row.names = FALSE)
+write.table(data2,"../data/LVS_CMH.txt", quote = FALSE, col.names = TRUE, row.names = FALSE)
+
+
+```
+

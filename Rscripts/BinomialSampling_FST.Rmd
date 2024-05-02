@@ -1,0 +1,210 @@
+---
+title: "Using binomial sampling to assess the distribution of FST between males and females"
+author: "Ian Dworkin"
+date: "`r format(Sys.time(),'%d %b %Y')`"
+output:
+  pdf_document: 
+    toc: yes
+    number_sections: yes
+  html_document: 
+    toc: yes
+    fig_caption: yes
+    keep_md: yes
+    number_sections: yes
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(MASS)
+library(tidyverse)
+```
+
+# Binomail sampling approach to estimate F_{ST} between males and females
+## Background
+
+For our data, we sequenced pools (~200X) for each of males (100) and females (100) individuals. However, as these were pooled sequencing, we can not do an individual "label" based permutation test to provide an estimate of the sampling distribution under the null. However, since we know the allele frequencies for each sex within each lineage we can do the following.
+
+1. Compute sex averaged allele frequencies at each site. 
+2. As we are only using bi-allelic SNPs, we can assume binomial sampling, and compute the standard deviations around allele frequencies. Alternatively use rbinom for counts or rbeta.
+3. Calculate FST for
+
+
+
+```{r}
+N <- 200
+joint_freq <- 0.5 
+Male_A1 <- rbinom(1, N, joint_freq)
+Female_A1 <- rbinom(1, N, joint_freq)
+
+Male <- c(Male_A1, N - Male_A1)
+Female <- c(Female_A1, N - Female_A1)
+
+dat <- rbind(Male, Female)
+sex <- c("M", "F")
+
+mod1 <- glm(dat ~ sex, 
+            family = binomial(link = "logit"))
+
+summary(mod1)
+```
+
+
+### Notes from Tyler
+- Each sex had 100 diploid individuals (so 200 chromosomes)
+- Coverage varied from 50X - 250X. Averaged maybe 170X (to be used as mean)
+- lowest allowable allele frequency was 0.05, so we want to simulate from 0.05 to 0.95.
+
+
+## coverage simulation could like this
+
+```{r}
+sim_cov <- rnbinom(100000, mu = 130, size = 15)
+plot(density(sim_cov))
+```
+
+
+## The simulation
+So we will randomly draw a joint allele frequency (for both males and females) from 0.05 to 0.95, and then use binomial sampling with variable coverage per sex (assuming poisson), generate the appropriate counts, then compute the coefficient of interest.
+
+```{r}
+FreqDiffSim <- function() {
+  joint_freq <- runif(n = 1, min = 0.05, max = 0.95)
+  
+  male_coverage <- rnbinom(1, mu = 130, size = 15)
+  female_coverage <- rnbinom(1, mu = 130, size = 15)
+  
+  male_A1 <- rbinom(1, male_coverage, joint_freq)
+  female_A1 <- rbinom(1, female_coverage, joint_freq)
+  
+  Male <- c(male_A1, male_coverage - male_A1)
+  Female <- c(female_A1, female_coverage - female_A1)
+  dat <- rbind(Male, Female)
+  
+  #sex <- c("M", "F")
+  sex_alt <- cbind(c(1,1), c(0,1))
+  #mod1 <- glm(dat ~ sex, 
+  #          family = binomial(link = "logit"))
+
+  mod1b <- glm.fit(x = sex_alt, y = dat,
+                   family = binomial(link = "logit"))
+  #blah <- emmeans(mod1, pairwise ~ sex, type = "response")
+  
+  return(c(p_F = as.numeric(plogis(coef(mod1b)[1])),
+           p_M = plogis(sum(coef(mod1b)))))
+  
+  rm(joint_freq, male_coverage, female_coverage, male_A1, female_A1, Male, Female)
+}
+```
+
+
+```{r}
+FreqDiffSim()
+
+x <- t(replicate(n = 1000000, FreqDiffSim()))
+
+dim(x)
+```
+
+
+Plot correlation between male and female allele frequencies for the simulation
+
+
+```{r}
+
+ddat <- read.csv("../data/sex_freq/3L_with_coveragefrequency.csv", header = T)
+
+C1 <- ddat[,c("X1.FREQ","X2.FREQ")]
+C1[C1==0] <- NA
+C1 <- na.omit(C1)
+colnames(C1) <- c("p_F","p_M")
+
+C2 <- ddat[,c("X3.FREQ","X4.FREQ")]
+C2[C2==0] <- NA
+C2[C2==1] <- NA
+C2 <- na.omit(C2)
+colnames(C2) <- c("p_F","p_M")
+
+E1 <- ddat[,c("X5.FREQ","X6.FREQ")]
+E1[E1==0] <- NA
+E1[E1==1] <- NA
+E1 <- na.omit(E1)
+colnames(E1) <- c("p_F","p_M")
+
+E2 <- ddat[,c("X7.FREQ","X8.FREQ")]
+E2[E2==0] <- NA
+E2[E2==1] <- NA
+E2 <- na.omit(E2)
+colnames(E2) <- c("p_F","p_M")
+
+L1 <- ddat[,c("X9.FREQ","X10.FREQ")]
+L1[L1==0] <- NA
+L1[L1==1] <- NA
+L1 <- na.omit(L1)
+colnames(L1) <- c("p_F","p_M")
+
+L2 <- ddat[,c("X11.FREQ","X12.FREQ")]
+L2[L2==0] <- NA
+L2[L2==1] <- NA
+L2 <- na.omit(L2)
+colnames(L2) <- c("p_F","p_M")
+
+S1 <- ddat[,c("X13.FREQ","X14.FREQ")]
+S1[S1==0] <- NA
+S1[S1==1] <- NA
+S1 <- na.omit(S1)
+colnames(S1) <- c("p_F","p_M")
+
+S2 <- ddat[,c("X15.FREQ","X16.FREQ")]
+S2[S2==0] <- NA
+S2[S2==1] <- NA
+S2 <- na.omit(S2)
+colnames(S2) <- c("p_F","p_M")
+
+ggplot() +
+  geom_point(data = as.data.frame(x), aes(x = p_F, y = p_M), alpha = 0.01, colour = "black", size = 1) +
+  geom_point(data = S2, aes(x = p_F, y = p_M), colour = "red", alpha = 0.08, size = 1) +
+  theme_classic()
+
+supp_C1_sex_corr
+```
+
+```{r}
+x_diff <- x[,1] - x[,2]
+```
+
+Let's do this for $10^6$ sites
+```{r}
+sites <- 10^5
+allele_freqs <- matrix(NA, nrow = sites, ncol = 2)
+
+dim(allele_freqs)
+```
+
+
+```{r}
+system.time(for (i in 1:sites) {
+  allele_freqs[i,] <- FreqDiffSim()
+})
+```
+
+
+
+```{r}
+plot(allele_freqs, pch = 20, col = rgb(0,0,1, 0.05))
+```
+
+Calculate difference in allele frequencies
+```{r}
+ freq_diff <- abs(allele_freqs[,1] - allele_freqs[,2])
+ length(freq_diff)
+ 
+ quantile(freq_diff, 
+          probs = c(0, 0.25, 0.5, 0.75, 0.9, 0.95, 0.99, 0.999, 0.9999))
+```
+
+

@@ -1,0 +1,83 @@
+---
+title: "plotting_between_sex_models"
+author: "Tyler Audet"
+date: "2024-04-30"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This script reads in the output from the between sex models, extracts the 99.9% quantile, and then plots all positions with 'significant' positions plotted in red (Figures S27-S34). The ggplot code chunk was changed for each treatment rather than repeated 8 times.
+
+These data files are not provided, but are outputs from our between sex model script.
+
+```{r}
+library(data.table)
+library(tidyverse)
+
+C1 <- read.table("../data/C1_sex_model.txt", header = T)
+C2 <- read.table("../data/C2_sex_model.txt", header = T)
+E1 <- read.table("../data/E1_sex_model.txt", header = T)
+E2 <- read.table("../data/E2_sex_model.txt", header = T)
+L1 <- read.table("../data/L1_sex_model.txt", header = T)
+L2 <- read.table("../data/L2_sex_model.txt", header = T)
+S1 <- read.table("../data/S1_sex_model.txt", header = T)
+S2 <- read.table("../data/S2_sex_model.txt", header = T)
+
+quantile(C1$odds.ratio,0.999)
+highC1 <- C1[C1$odds.ratio>5.799623,]
+C1_region <- highC1[highC1$pos>18109000 & highC1$pos < 21558000,]
+C1_sig <- C1[C1$pval < 10^-6,]
+
+quantile(C2$odds.ratio,0.999)
+highC2 <- C2[C2$odds.ratio>6.037953,]
+C2_region <- highC2[highC2$pos>18109000 & highC2$pos < 21558000,]
+C2_sig <- C2[C2$pval < 10^-6,]
+
+quantile(E1$odds.ratio,0.999)
+highE1 <- E1[E1$odds.ratio>7.586667,]
+E1_region <- highE1[highE1$pos>18109000 & highE1$pos < 21558000,]
+E1_sig <- E1[E1$pval < 10^-6,]
+
+quantile(E2$odds.ratio,0.999)
+highE2 <- E2[E2$odds.ratio>6.892422,]
+E2_region <- highE2[highE2$pos>18109000 & highE2$pos < 21558000,]
+E2_sig <- E2[E2$pval < 10^-6,]
+
+quantile(L1$odds.ratio,0.999)
+highL1 <- L1[L1$odds.ratio>5,]
+L1_region <- highL1[highL1$pos>18109000 & highL1$pos < 21558000,]
+L1_sig <- L1[L1$pval < 10^-6,]
+
+quantile(L2$odds.ratio,0.999)
+highL2 <- L2[L2$odds.ratio>6.1,]
+L2_region <- highL2[highL2$pos>18109000 & highL2$pos < 21558000,]
+L2_sig <- L2[L2$pval < 10^-6,]
+
+quantile(S1$odds.ratio,0.999)
+highS1 <- S1[S1$odds.ratio>7.666408,]
+S1_region <- highS1[highS1$pos>18109000 & highS1$pos < 21558000,]
+S1_sig <- S1[S1$pval < 10^-6,]
+
+quantile(S2$odds.ratio,0.999)
+highS2 <- S2[S2$odds.ratio>9.731729,]
+S2_region <- highS2[highS2$pos>18109000 & highS2$pos < 21558000,]
+S2_sig <- S2[S2$pval < 10^-6,]
+
+ggplot(S2, aes(x = pos, y = odds.ratio)) +
+  geom_point(aes(x = pos, y = odds.ratio), colour = "black", size = 0.05, alpha = 0.1) +
+  geom_pointrange(data = S2_sig, aes(ymin = LCL, ymax = UCL),fatten = 0.001, size = 0.1, colour = "red") +
+  #geom_vline(xintercept = 18109000,linetype="dotted") +
+  #geom_vline(xintercept = 21558000,linetype="dotted") +
+  xlim(18109000,21558000) +
+  ylim(0,12) +
+  xlab("Position on 3L (bp)") +
+  ylab("Odds Ratio") +
+  theme_bw()
+  
+#supp_C1_mod_sig
+
+```
+
